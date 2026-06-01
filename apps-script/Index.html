@@ -302,7 +302,26 @@
     <!-- SETTINGS -->
     <section id="t-settings" class="panel hide">
       <h1 class="page-h">Settings</h1>
-      <p class="page-sub">Stages and matching strictness. Syncs to every extension within minutes.</p>
+      <p class="page-sub">Team, stages and matching strictness. Syncs to every extension within minutes.</p>
+
+      <div class="card">
+        <div class="card-h"><div><h3>Invite teammates</h3><p>One person sets this up; everyone else just pastes the code below into their extension.</p></div></div>
+        <label class="fl" for="s_team">Team members (comma-separated)</label>
+        <input id="s_team" placeholder="Vedant,Rahul,Saksham" oninput="buildInvite()">
+        <div style="margin:16px 0 6px"><label class="fl">Invite code — copy &amp; send to each teammate</label></div>
+        <textarea id="inviteCode" readonly rows="3" style="resize:none;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted)"></textarea>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+          <button class="btn primary" onclick="copyInvite()">Copy invite code</button>
+          <span class="hint" id="inviteMsg" style="margin:0"></span>
+        </div>
+        <div class="hint" style="margin-top:14px;line-height:1.6">
+          <b>What a teammate does to join:</b><br>
+          1. Install the extension: <span class="mono">chrome://extensions</span> → Developer mode → <b>Load unpacked</b> → pick the <span class="mono">extension/</span> folder.<br>
+          2. Click the DedupManager icon → <b>Connection settings</b> → paste the invite code → <b>Import config</b>.<br>
+          3. Pick their name under <b>I am</b>. Done — same shared sheet, no Google login needed.
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-h"><div><h3>Pipeline stages</h3><p>Comma-separated. First is the default for new people.</p></div></div>
         <input id="s_stages" placeholder="New,Contacted,Replied,Meeting,Won,Lost">
@@ -351,16 +370,35 @@
   function $(id){return document.getElementById(id)}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]})}
 
+  var CREDS={url:'',key:''};
   function init(){
-    var sel=$('me'); TEAM.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o)});
-    var saved=localStorage.getItem('dedup_me'); if(saved&&TEAM.indexOf(saved)>=0) sel.value=saved;
-    setAva();
+    fillMe();
     google.script.run.withSuccessHandler(function(r){
       SETTINGS=r.settings||{};
       STAGES=splitList(SETTINGS.stages,'New');
       SOURCES=splitList(SETTINGS.sources,'');
+      if(SETTINGS.team){TEAM=splitList(SETTINGS.team,'');fillMe();}
       fillStages(); fillSources(); renderKnobs();
     }).apiBootstrap();
+    google.script.run.withSuccessHandler(function(c){CREDS={url:c.url||'',key:c.key||''};buildInvite();}).apiCreds();
+  }
+  function fillMe(){
+    var sel=$('me'),cur=sel.value||localStorage.getItem('dedup_me')||'';
+    sel.innerHTML=TEAM.map(function(n){return '<option'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'}).join('');
+    setAva();
+  }
+  // ── invite code (base64 of {apiUrl,apiKey,team}) ──────────────
+  function inviteTeam(){return splitList($('s_team').value||SETTINGS.team||TEAM.join(','),'')}
+  function buildInvite(){
+    if(!$('inviteCode'))return;
+    if(!CREDS.url||!CREDS.key){$('inviteCode').value='(deploy not ready — re-run ./deploy.sh)';return;}
+    var obj={apiUrl:CREDS.url,apiKey:CREDS.key,team:inviteTeam()};
+    $('inviteCode').value=btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+  function copyInvite(){
+    var t=$('inviteCode'); t.select();
+    navigator.clipboard.writeText(t.value).then(function(){$('inviteMsg').textContent='Copied — send it to your teammate'},
+      function(){$('inviteMsg').textContent='Select-all + copy the box above'});
   }
   function splitList(v,fb){return String(v||fb).split(',').map(function(s){return s.trim()}).filter(Boolean)}
   function saveMe(){localStorage.setItem('dedup_me',$('me').value);setAva()}
@@ -375,7 +413,7 @@
     var p=$('t-'+name); p.classList.remove('panel'); void p.offsetWidth; p.classList.add('panel');
     if(name==='people') doSearch();
     if(name==='stats') loadStats();
-    if(name==='settings'){$('s_stages').value=SETTINGS.stages||'';$('s_sources').value=SETTINGS.sources||''}
+    if(name==='settings'){$('s_stages').value=SETTINGS.stages||'';$('s_sources').value=SETTINGS.sources||'';$('s_team').value=SETTINGS.team||TEAM.join(',');buildInvite()}
   }
 
   // stage pill / hue
@@ -518,9 +556,10 @@
     patch.fuzzy_threshold=Number($('k_fuzzy_threshold').value)||0.85;
     patch.stages=$('s_stages').value.trim()||SETTINGS.stages;
     patch.sources=$('s_sources').value.trim()||SETTINGS.sources;
+    patch.team=$('s_team').value.trim()||SETTINGS.team;
     google.script.run.withSuccessHandler(function(r){
       SETTINGS=r.settings; STAGES=splitList(SETTINGS.stages,'New'); SOURCES=splitList(SETTINGS.sources,'');
-      fillStages(); fillSources(); toast('Settings saved');
+      var tt=splitList(SETTINGS.team,''); if(tt.length)TEAM=tt; fillMe(); fillStages(); fillSources(); buildInvite(); toast('Settings saved');
     }).apiSettings(patch);
   }
 

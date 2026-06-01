@@ -34,7 +34,8 @@ var DEFAULT_SETTINGS = {
   linkedin_slug_only: true, reddit_strip_prefix: true, phone_match_last10: true,
   fuzzy_name_company: false, fuzzy_threshold: 0.85,
   stages: 'New,Contacted,Replied,Meeting,Won,Lost',
-  sources: 'LinkedIn,Email,Phone,WhatsApp,Slack,Twitter/X,Reddit,Other'
+  sources: 'LinkedIn,Email,Phone,WhatsApp,Slack,Twitter/X,Reddit,Other',
+  team: 'Vedant,Rahul,Saksham'
 };
 
 // ── Entry points ────────────────────────────────────────────────────────────
@@ -316,6 +317,15 @@ function updateContact(body) {
 // ── Web-UI server calls (google.script.run; inside an authed Google session) ─
 
 function apiBootstrap() { return { contacts: readContacts(), settings: readSettings() }; }
+/** Web-app URL + team key, so the dashboard can show a ready-to-share invite. */
+function apiCreds() {
+  var url = '';
+  try { url = ScriptApp.getService().getUrl(); } catch (e) {}
+  // Normalize the Workspace domain-scoped URL (/a/<domain>/macros/…) to the
+  // generic /macros/s/<id>/exec form, which works anonymously for everyone.
+  url = url.replace(/\/a\/[^/]+\/macros\//, '/macros/');
+  return { ok: true, url: url, key: getApiKey() };
+}
 function apiUpsert(body) { return upsertContact(body); }
 function apiUpdate(body) { return updateContact(body); }
 function apiDelete(body) { return deleteContact(body); }
