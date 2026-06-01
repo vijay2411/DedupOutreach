@@ -129,13 +129,21 @@ function readContacts() {
 }
 
 function appendRecord(sh, headers, record) {
-  sh.appendRow(headers.map(function (h) { return record[h] !== undefined ? record[h] : ''; }));
+  var row = headers.map(function (h) { return record[h] !== undefined ? record[h] : ''; });
+  var n = sh.getLastRow() + 1;
+  var range = sh.getRange(n, 1, 1, headers.length);
+  range.setNumberFormat('@');        // text first, so "+1..." phones aren't coerced
+  range.setValues([row]);
 }
 
 function applyPatch(sh, headers, rowNum, patch) {
   Object.keys(patch).forEach(function (k) {
     var col = headers.indexOf(k);
-    if (col > -1) sh.getRange(rowNum, col + 1).setValue(patch[k]);
+    if (col > -1) {
+      var cell = sh.getRange(rowNum, col + 1);
+      cell.setNumberFormat('@');
+      cell.setValue(patch[k]);
+    }
   });
 }
 
