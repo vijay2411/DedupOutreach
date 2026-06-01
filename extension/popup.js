@@ -27,6 +27,8 @@ function load() {
       var me = (s.me && team.indexOf(s.me) >= 0) ? s.me : team[0];
       fillTeam(team, me);
       if (s.me !== me) chrome.storage.local.set({ me: me });
+      $('enabled').checked = s.barEnabled !== false;
+      $('activeRow').style.opacity = $('enabled').checked ? '1' : '.45';
       if (s.apiUrl) $('openDash').href = s.apiUrl;
       $('apiUrl').value = s.apiUrl || '';
       $('apiKey').value = s.apiKey || '';
@@ -74,9 +76,15 @@ $('me').addEventListener('change', function () {
   msg('Saved as ' + $('me').value);
 });
 
+$('enabled').addEventListener('change', function () {
+  chrome.storage.local.set({ barEnabled: $('enabled').checked });
+  $('activeRow').style.opacity = $('enabled').checked ? '1' : '.45';
+  msg($('enabled').checked ? 'Bar shown' : 'Bar hidden everywhere');
+});
+
 $('active').addEventListener('change', function () {
   chrome.storage.local.set({ activeMode: $('active').checked });
-  msg($('active').checked ? 'Active mode on' : 'Active mode off');
+  msg($('active').checked ? 'Auto mode on' : 'Manual mode');
 });
 
 $('saveCfg').addEventListener('click', function () {

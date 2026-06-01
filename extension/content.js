@@ -12,16 +12,23 @@
  */
 (function () {
   if (window.top !== window) return;                 // don't run in iframes
-  var STATE = { contacts: [], settings: {}, me: '', active: true, stages: ['New'], sources: [] };
-  var F = {}, dirty = false, collapsed = false, checkSeq = 0, lastDetectKey = null;
+  var STATE = { contacts: [], settings: {}, me: '', active: true, enabled: true, stages: ['New'], sources: [] };
+  var F = {}, dirty = false, collapsed = false, checkSeq = 0, lastDetectKey = null, hooked = false;
 
-  chrome.storage.local.get(['contacts', 'settings', 'me', 'activeMode', 'barCollapsed'], function (s) {
-    apply(s); collapsed = !!s.barCollapsed; build(); hook(); refreshFromPage();
+  chrome.storage.local.get(['contacts', 'settings', 'me', 'activeMode', 'barEnabled', 'barCollapsed'], function (s) {
+    apply(s); collapsed = !!s.barCollapsed;
+    if (STATE.enabled) { build(); hook(); refreshFromPage(); }
   });
   chrome.storage.onChanged.addListener(function (ch) {
     var s = {};
-    ['contacts', 'settings', 'me', 'activeMode'].forEach(function (k) { if (ch[k]) s[k] = ch[k].newValue; });
+    ['contacts', 'settings', 'me', 'activeMode', 'barEnabled'].forEach(function (k) { if (ch[k]) s[k] = ch[k].newValue; });
     apply(s);
+    if (ch.barEnabled !== undefined) {                 // global on/off
+      if (STATE.enabled) { build(); hook(); lastDetectKey = null; dirty = false; refreshFromPage(); }
+      else remove();
+      return;
+    }
+    if (!STATE.enabled) return;
     if (ch.settings && F.source) { fillSelect(F.source.el, [''].concat(STATE.sources), F.source.get(), true); fillSelect(F.status.el, STATE.stages, F.status.get(), false); }
     if (ch.activeMode !== undefined) { lastDetectKey = null; dirty = false; refreshFromPage(); }  // re-render on mode switch
     else if (ch.contacts) check();
@@ -31,6 +38,7 @@
     if (s.settings !== undefined) STATE.settings = s.settings || {};
     if (s.me !== undefined) STATE.me = s.me || '';
     if (s.activeMode !== undefined) STATE.active = s.activeMode !== false;
+    if (s.barEnabled !== undefined) STATE.enabled = s.barEnabled !== false;
     STATE.stages = list(STATE.settings.stages, 'New');
     STATE.sources = list(STATE.settings.sources, 'LinkedIn,Email,Phone,WhatsApp,Slack,Twitter/X,Reddit,Other');
   }
@@ -38,6 +46,7 @@
 
   // ── SPA navigation hook ────────────────────────────────────────────────
   function hook() {
+    if (hooked) return; hooked = true;
     ['pushState', 'replaceState'].forEach(function (m) {
       var o = history[m]; history[m] = function () { var r = o.apply(this, arguments); fire(); return r; };
     });
@@ -153,6 +162,8 @@
 
   // ── Behaviour ─────────────────────────────────────────────────────────
   function refreshFromPage() {
+    if (!STATE.enabled) { remove(); return; }
+    if (!F.mode || !document.getElementById('dedup-panel')) build();
     if (!F.mode) return;
     F.mode.textContent = STATE.active ? 'auto' : 'manual';
     F.mode.className = 'dm-mode ' + (STATE.active ? 'on' : 'off');
