@@ -9,7 +9,7 @@
  */
 (function (root) {
   // Order matters only for which reason is reported first.
-  var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit', 'handle'];
+  var IDENTIFIER_FIELDS = ['email', 'phone', 'link'];
 
   function normalizeField(field, value, settings) {
     var raw = (value == null ? '' : String(value)).trim();
@@ -17,9 +17,7 @@
     settings = settings || {};
     if (field === 'email') return normEmail(raw, settings);
     if (field === 'phone') return normPhone(raw, settings);
-    if (field === 'linkedin') return normLinkedin(raw, settings);
-    if (field === 'reddit') return normReddit(raw, settings);
-    if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '').toLowerCase();
+    if (field === 'link') return linkParts(raw).key;
     return stripUrl(raw);
   }
 
@@ -42,16 +40,26 @@
     return digits;
   }
 
-  function normLinkedin(raw, s) {
-    var m = raw.match(/\/in\/([^/?#]+)/i);
-    if (m && s.linkedin_slug_only !== false) return 'in/' + m[1].toLowerCase();
-    return stripUrl(raw);
-  }
-
-  function normReddit(raw, s) {
-    var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
-    var handle = r ? r[1] : raw.replace(/^\/?(u\/|user\/)/i, '');
-    return s.reddit_strip_prefix !== false ? handle.replace(/^@/, '').toLowerCase() : handle;
+  /**
+   * Parse any profile link / handle (LinkedIn, X, Instagram, Reddit, GitHub,
+   * Facebook, or a bare @handle) into a platform-prefixed dedupe key, a clean
+   * canonical form for storage, and the platform name (used to auto-set source).
+   * The platform prefix means two different platforms with the same handle do
+   * NOT false-merge.
+   */
+  function linkParts(raw) {
+    var s = (raw == null ? '' : String(raw)).trim();
+    if (!s) return { key: '', canonical: '', platform: '' };
+    var low = s.toLowerCase(), m;
+    function grab(re) { var x = low.match(re); return x ? x[1].replace(/^@/, '') : null; }
+    if ((m = grab(/linkedin\.com\/in\/([^/?#\s]+)/))) return { platform: 'LinkedIn', key: 'li:' + m, canonical: 'https://www.linkedin.com/in/' + m + '/' };
+    if ((m = grab(/(?:twitter|x)\.com\/([^/?#\s]+)/)) && ['home', 'search', 'i', 'explore'].indexOf(m) < 0) return { platform: 'Twitter/X', key: 'x:' + m, canonical: 'https://x.com/' + m };
+    if ((m = grab(/instagram\.com\/([^/?#\s]+)/))) return { platform: 'Instagram', key: 'ig:' + m, canonical: 'https://instagram.com/' + m };
+    if ((m = grab(/reddit\.com\/(?:user|u)\/([^/?#\s]+)/)) || (m = grab(/^(?:user|u)\/([^/?#\s]+)$/))) return { platform: 'Reddit', key: 'rd:' + m, canonical: 'https://reddit.com/user/' + m };
+    if ((m = grab(/github\.com\/([^/?#\s]+)/))) return { platform: 'GitHub', key: 'gh:' + m, canonical: 'https://github.com/' + m };
+    if ((m = grab(/(?:facebook|fb)\.com\/([^/?#\s]+)/))) return { platform: 'Facebook', key: 'fb:' + m, canonical: 'https://facebook.com/' + m };
+    if (/^@?[a-z0-9._-]+$/i.test(s)) { var h = s.replace(/^@/, '').toLowerCase(); return { platform: '', key: 'h:' + h, canonical: '@' + h }; }
+    return { platform: '', key: 'url:' + stripUrl(s), canonical: s };
   }
 
   function stripUrl(str) {
@@ -99,17 +107,7 @@
       return plus + raw.replace(/[^0-9]/g, '');
     }
     if (field === 'email') return raw.replace(/^mailto:/i, '').replace(/\s+/g, '').toLowerCase();
-    if (field === 'linkedin') {
-      var m = raw.match(/\/in\/([^/?#\s]+)/i);
-      if (m) return 'https://www.linkedin.com/in/' + m[1].toLowerCase() + '/';
-      if (/^[a-z0-9._-]+$/i.test(raw)) return 'https://www.linkedin.com/in/' + raw.toLowerCase() + '/';
-      return raw.replace(/\s+/g, '');
-    }
-    if (field === 'reddit') {
-      var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
-      return 'u/' + (r ? r[1] : raw.replace(/^@/, ''));
-    }
-    if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '');
+    if (field === 'link') return linkParts(raw).canonical;
     return raw; // name, company, source: trimmed + single-spaced
   }
 
@@ -149,6 +147,7 @@
     IDENTIFIER_FIELDS: IDENTIFIER_FIELDS,
     normalizeField: normalizeField,
     canonicalize: canonicalize,
+    linkParts: linkParts,
     matchPerson: matchPerson,
     findHits: findHits,
     keys: keys,

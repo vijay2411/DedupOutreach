@@ -21,13 +21,13 @@ var SETTINGS_SHEET = 'Settings';
 
 // Columns the app manages. Anything else in the sheet is user-owned & preserved.
 var MANAGED_HEADERS = [
-  'id', 'name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source',
+  'id', 'name', 'company', 'phone', 'email', 'link', 'source',
   'status', 'added_by', 'added_at', 'updated_at', 'updated_by', 'notes'
 ];
 // Fields a write request is allowed to set on a managed row.
-var EDITABLE_FIELDS = ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source', 'status', 'notes'];
-// Fields that dedupe a person (handle covers Slack/Twitter/etc.)
-var ID_FIELDS = ['phone', 'linkedin', 'email', 'reddit', 'handle'];
+var EDITABLE_FIELDS = ['name', 'company', 'phone', 'email', 'link', 'source', 'status', 'notes'];
+// Fields that dedupe a person ('link' covers any profile URL / @handle).
+var ID_FIELDS = ['phone', 'email', 'link'];
 
 var DEFAULT_SETTINGS = {
   email_lowercase: true, email_strip_plus: true, email_ignore_dots: false,
@@ -91,6 +91,7 @@ function ensureHeaders(sh) {
     sh.getRange(1, 1, 1, MANAGED_HEADERS.length).setValues([MANAGED_HEADERS]);
     return MANAGED_HEADERS.slice();
   }
+  headers = dropDeprecated(sh, headers);
   var missing = MANAGED_HEADERS.filter(function (h) { return headers.indexOf(h) === -1; });
   if (missing.length) {
     sh.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
@@ -98,6 +99,20 @@ function ensureHeaders(sh) {
   }
   ensureTextFormat(sh, headers.length);
   return headers;
+}
+
+/** One-time: remove pre-merge columns (linkedin/reddit/handle) folded into `link`. */
+function dropDeprecated(sh, headers) {
+  var props = PropertiesService.getDocumentProperties();
+  if (props.getProperty('migr_link')) return headers;
+  var dep = ['linkedin', 'reddit', 'handle'], removed = false;
+  for (var i = headers.length - 1; i >= 0; i--) {
+    if (dep.indexOf(headers[i]) > -1) { sh.deleteColumn(i + 1); removed = true; }
+  }
+  props.setProperty('migr_link', '1');
+  if (!removed) return headers;
+  var lc = sh.getLastColumn();
+  return lc > 0 ? sh.getRange(1, 1, 1, lc).getValues()[0] : [];
 }
 
 /** Force the data area to plain text so "+1..." phones aren't read as formulas. */
@@ -223,7 +238,7 @@ function upsertContact(body) {
   if (matchIdx > -1) {
     var row = rows[matchIdx];
     var patch = {};
-    ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle'].forEach(function (f) {
+    ['name', 'company', 'phone', 'email', 'link'].forEach(function (f) {
       if (!String(row[f] || '').trim() && body[f]) patch[f] = body[f]; // fill blanks only
     });
     if (body.status) patch.status = body.status;
@@ -239,9 +254,8 @@ function upsertContact(body) {
   var now = new Date().toISOString();
   appendRecord(sh, headers, {
     id: id, name: body.name || '', company: body.company || '',
-    phone: body.phone || '', linkedin: body.linkedin || '', email: body.email || '',
-    reddit: body.reddit || '', handle: body.handle || '', source: body.source || '',
-    status: body.status || firstStage(settings),
+    phone: body.phone || '', email: body.email || '', link: body.link || '',
+    source: body.source || '', status: body.status || firstStage(settings),
     added_by: body.added_by || 'unknown', added_at: now, updated_at: now,
     updated_by: body.added_by || '', notes: body.notes || ''
   });
@@ -264,8 +278,7 @@ function deleteContact(body) {
 function candidateFrom(body) {
   return {
     name: body.name || '', company: body.company || '', phone: body.phone || '',
-    linkedin: body.linkedin || '', email: body.email || '', reddit: body.reddit || '',
-    handle: body.handle || '', source: body.source || ''
+    email: body.email || '', link: body.link || '', source: body.source || ''
   };
 }
 
@@ -362,7 +375,7 @@ function setup() {
 // ── Matching engine ─────────────────────────────────────────────────────────
 // Kept algorithmically identical to extension/matcher.js. Mirror any change.
 
-var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit', 'handle'];
+var IDENTIFIER_FIELDS = ['email', 'phone', 'link'];
 
 function normalizeField(field, value, settings) {
   var raw = (value == null ? '' : String(value)).trim();
@@ -370,10 +383,24 @@ function normalizeField(field, value, settings) {
   settings = settings || {};
   if (field === 'email') return normEmail_(raw, settings);
   if (field === 'phone') return normPhone_(raw, settings);
-  if (field === 'linkedin') return normLinkedin_(raw, settings);
-  if (field === 'reddit') return normReddit_(raw, settings);
-  if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '').toLowerCase();
+  if (field === 'link') return linkParts(raw).key;
   return stripUrl_(raw);
+}
+
+/** See extension/matcher.js linkParts — kept identical. */
+function linkParts(raw) {
+  var s = (raw == null ? '' : String(raw)).trim();
+  if (!s) return { key: '', canonical: '', platform: '' };
+  var low = s.toLowerCase(), m;
+  function grab(re) { var x = low.match(re); return x ? x[1].replace(/^@/, '') : null; }
+  if ((m = grab(/linkedin\.com\/in\/([^/?#\s]+)/))) return { platform: 'LinkedIn', key: 'li:' + m, canonical: 'https://www.linkedin.com/in/' + m + '/' };
+  if ((m = grab(/(?:twitter|x)\.com\/([^/?#\s]+)/)) && ['home', 'search', 'i', 'explore'].indexOf(m) < 0) return { platform: 'Twitter/X', key: 'x:' + m, canonical: 'https://x.com/' + m };
+  if ((m = grab(/instagram\.com\/([^/?#\s]+)/))) return { platform: 'Instagram', key: 'ig:' + m, canonical: 'https://instagram.com/' + m };
+  if ((m = grab(/reddit\.com\/(?:user|u)\/([^/?#\s]+)/)) || (m = grab(/^(?:user|u)\/([^/?#\s]+)$/))) return { platform: 'Reddit', key: 'rd:' + m, canonical: 'https://reddit.com/user/' + m };
+  if ((m = grab(/github\.com\/([^/?#\s]+)/))) return { platform: 'GitHub', key: 'gh:' + m, canonical: 'https://github.com/' + m };
+  if ((m = grab(/(?:facebook|fb)\.com\/([^/?#\s]+)/))) return { platform: 'Facebook', key: 'fb:' + m, canonical: 'https://facebook.com/' + m };
+  if (/^@?[a-z0-9._-]+$/i.test(s)) { var h = s.replace(/^@/, '').toLowerCase(); return { platform: '', key: 'h:' + h, canonical: '@' + h }; }
+  return { platform: '', key: 'url:' + stripUrl_(s), canonical: s };
 }
 
 function canonicalize(field, value) {
@@ -384,22 +411,12 @@ function canonicalize(field, value) {
     return plus + raw.replace(/[^0-9]/g, '');
   }
   if (field === 'email') return raw.replace(/^mailto:/i, '').replace(/\s+/g, '').toLowerCase();
-  if (field === 'linkedin') {
-    var m = raw.match(/\/in\/([^/?#\s]+)/i);
-    if (m) return 'https://www.linkedin.com/in/' + m[1].toLowerCase() + '/';
-    if (/^[a-z0-9._-]+$/i.test(raw)) return 'https://www.linkedin.com/in/' + raw.toLowerCase() + '/';
-    return raw.replace(/\s+/g, '');
-  }
-  if (field === 'reddit') {
-    var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
-    return 'u/' + (r ? r[1] : raw.replace(/^@/, ''));
-  }
-  if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '');
+  if (field === 'link') return linkParts(raw).canonical;
   return raw;
 }
 
 function cleanBody(body) {
-  ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source'].forEach(function (f) {
+  ['name', 'company', 'phone', 'email', 'link', 'source'].forEach(function (f) {
     if (body[f] !== undefined && body[f] !== null) body[f] = canonicalize(f, body[f]);
   });
   return body;

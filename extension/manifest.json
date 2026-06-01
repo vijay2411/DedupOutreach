@@ -15,11 +15,7 @@
   "action": { "default_popup": "popup.html", "default_title": "DedupManager" },
   "content_scripts": [
     {
-      "matches": [
-        "https://www.linkedin.com/*",
-        "https://www.reddit.com/*",
-        "https://mail.google.com/*"
-      ],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["matcher.js", "content.js"],
       "css": ["badge.css"],
       "run_at": "document_idle"

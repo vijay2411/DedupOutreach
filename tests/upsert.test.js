@@ -17,6 +17,7 @@ function makeSheet() {
     getMaxRows() { return Math.max(1000, this._d.length); },
     appendRow(r) { this._d.push(r.slice()); },
     deleteRow(n) { this._d.splice(n - 1, 1); },
+    deleteColumn(n) { this._d.forEach(function (row) { row.splice(n - 1, 1); }); },
     getDataRange() { return this.getRange(1, 1, Math.max(1, this._d.length), Math.max(1, this.getLastColumn())); },
     getRange(r, c, nr, nc) {
       nr = nr || 1; nc = nc || 1; var sh = this;
@@ -50,12 +51,12 @@ vm.runInContext('this.upsertContact=upsertContact;this.readContacts=readContacts
 var f = 0;
 function ok(c, m) { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) f++; }
 
-var r = ctx.upsertContact({ added_by: 'Aman', name: 'Jane Doe', company: 'Acme', linkedin: 'https://www.linkedin.com/in/jane-doe/', status: 'Contacted' });
+var r = ctx.upsertContact({ added_by: 'Aman', name: 'Jane Doe', company: 'Acme', link: 'https://www.linkedin.com/in/jane-doe/', status: 'Contacted' });
 ok(r.ok && !r.merged, 'new person created via linkedin');
 ok(ctx.readContacts().length === 1, 'one row');
 
-r = ctx.upsertContact({ added_by: 'Vedant', linkedin: 'linkedin.com/in/jane-doe?trk=x', email: 'jane@acme.com', status: 'Replied' });
-ok(r.merged && r.reason === 'linkedin', 'merged via shared linkedin (url noise ignored)');
+r = ctx.upsertContact({ added_by: 'Vedant', link: 'linkedin.com/in/jane-doe?trk=x', email: 'jane@acme.com', status: 'Replied' });
+ok(r.merged && r.reason === 'link', 'merged via shared linkedin (url noise ignored)');
 var p = ctx.readContacts();
 ok(p.length === 1, 'still one row');
 ok(p[0].email === 'jane@acme.com', 'new identifier (email) filled into existing row');
@@ -71,21 +72,21 @@ ok(!r.merged && ctx.readContacts().length === 2, 'distinct person = new row');
 
 var cs = sheets['Contacts'];
 cs._d[0].push('insight'); cs._d[1].push('warm intro via Sam');   // user adds a column in the Sheet
-r = ctx.upsertContact({ added_by: 'Aman', linkedin: 'linkedin.com/in/jane-doe', phone: '+1 415 555 9999' });
+r = ctx.upsertContact({ added_by: 'Aman', link: 'linkedin.com/in/jane-doe', phone: '+1 415 555 9999' });
 var jane = ctx.readContacts().find(function (x) { return x.name === 'Jane Doe'; });
 ok(r.merged, 'merge on Jane by linkedin');
 ok(jane.insight === 'warm intro via Sam', 'custom column preserved through merge');
 ok(String(jane.phone).indexOf('9999') > -1, 'phone added to existing record');
 
 ctx.apiSettings({ fuzzy_name_company: true });
-r = ctx.upsertContact({ added_by: 'Vedant', name: 'Bob', company: 'Globex', linkedin: 'linkedin.com/in/bob-x' });
+r = ctx.upsertContact({ added_by: 'Vedant', name: 'Bob', company: 'Globex', link: 'linkedin.com/in/bob-x' });
 ok(r.merged && r.reason === 'name+company', 'fuzzy name+company merges despite no shared identifier');
 
 // handle dedupe (Slack/Twitter/etc.) + source validation
-var hr = ctx.upsertContact({ added_by: 'Rahul', name: 'Sam Slack', handle: '@sam_k', source: 'Slack' });
+var hr = ctx.upsertContact({ added_by: 'Rahul', name: 'Sam Slack', link: '@sam_k', source: 'Slack' });
 ok(hr.ok && !hr.merged, 'source+handle person created');
-var hr2 = ctx.upsertContact({ added_by: 'Saksham', handle: 'sam_k', email: 'sam@x.com' });
-ok(hr2.merged && hr2.reason === 'handle', 'merged by handle (@ and case ignored)');
+var hr2 = ctx.upsertContact({ added_by: 'Saksham', link: 'sam_k', email: 'sam@x.com' });
+ok(hr2.merged && hr2.reason === 'link', 'merged by handle (@ and case ignored)');
 var nope = ctx.upsertContact({ added_by: 'Rahul', name: 'No Identifiers' });
 ok(!nope.ok, 'reject person with no identifier and no source');
 var srcOnly = ctx.upsertContact({ added_by: 'Rahul', name: 'Phone Friend', source: 'WhatsApp' });

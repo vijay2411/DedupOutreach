@@ -1,41 +1,51 @@
-/* On-page dedup badge. Scoped under #dedup-badge to avoid clashing with host pages. */
-#dedup-badge.dedup-badge{
-  position:fixed; right:20px; bottom:20px; z-index:2147483647;
-  width:300px; background:#fff; color:#16181d;
-  font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif; font-size:13px; line-height:1.4;
-  border:1px solid #e6e8ec; border-radius:14px;
-  box-shadow:0 8px 30px rgba(16,24,40,.16); padding:14px; animation:dm-in .16s ease-out;
+/* DedupManager persistent bar. Scoped under #dedup-panel. */
+#dedup-panel.dm-panel{
+  position:fixed; right:18px; bottom:18px; z-index:2147483647; width:300px;
+  background:#fff; color:#16181d; border:1px solid #e6e8ec; border-radius:14px;
+  box-shadow:0 10px 34px rgba(16,24,40,.18);
+  font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif; font-size:13px; line-height:1.45;
+  animation:dm-in .16s ease-out; overflow:hidden;
 }
 @keyframes dm-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-#dedup-badge .dm-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-#dedup-badge .dm-dot{width:9px;height:9px;border-radius:50%;flex:none}
-#dedup-badge.clear .dm-dot{background:#0f9d58}
-#dedup-badge.dup .dm-dot{background:#d92d20}
-#dedup-badge.manual .dm-dot{background:#2f54ff}
-#dedup-badge.form{max-height:84vh;overflow-y:auto}
-#dedup-badge .dm-title{font-weight:800;font-size:13.5px;letter-spacing:-.01em;flex:1}
-#dedup-badge .dm-x{cursor:pointer;color:#9aa0aa;font-size:18px;line-height:1;font-weight:600}
-#dedup-badge .dm-x:hover{color:#16181d}
-#dedup-badge .dm-sub{color:#6b7280;font-size:12px;margin-bottom:8px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#dedup-badge .dm-hit{display:flex;align-items:center;gap:8px;padding:5px 0}
-#dedup-badge .dm-hit-txt{color:#374151;font-size:12px;font-weight:500}
-#dedup-badge .dm-pill{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
-#dedup-badge .dm-sent{background:#fdf3e7;color:#b25e09}
-#dedup-badge .dm-replied{background:#e7f6ee;color:#0a6b3c}
-#dedup-badge .dm-no-reply{background:#eef0f3;color:#5b6472}
-#dedup-badge .dm-btn{width:100%;margin-top:10px;border:0;border-radius:10px;
-  padding:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;
-  background:#2f54ff;color:#fff}
-#dedup-badge .dm-btn:hover{filter:brightness(1.06)}
-#dedup-badge .dm-btn:disabled{opacity:.5;cursor:not-allowed}
-#dedup-badge .dm-btn.ghost{background:#fff;color:#16181d;border:1px solid #e6e8ec;margin-top:6px}
-#dedup-badge .dm-warn{color:#d92d20;font-size:11.5px;margin-top:8px;font-weight:600}
-#dedup-badge .dm-msg{color:#6b7280;font-size:12px;min-height:16px;margin-top:6px;font-weight:600}
-#dedup-badge .dm-field{display:block;margin-top:9px}
-#dedup-badge .dm-lbl{display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:3px}
-#dedup-badge .dm-field input,#dedup-badge .dm-field select{
-  width:100%;font-family:inherit;font-size:13px;padding:8px 10px;
+@media (prefers-reduced-motion:reduce){#dedup-panel.dm-panel{animation:none}}
+
+#dedup-panel .dm-h{display:flex;align-items:center;gap:8px;padding:11px 13px;cursor:default;border-bottom:1px solid #eef0f4}
+#dedup-panel.collapsed .dm-h{border-bottom:0;cursor:pointer}
+#dedup-panel .dm-logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(140deg,#6d6df0,#4a45c2);
+  color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;flex:none}
+#dedup-panel .dm-name{font-weight:800;font-size:13px;letter-spacing:-.01em;flex:1}
+#dedup-panel .dm-mode{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:20px}
+#dedup-panel .dm-mode.on{background:#ecedfb;color:#4a45c2}
+#dedup-panel .dm-mode.off{background:#eef0f3;color:#6a7180}
+#dedup-panel .dm-min{cursor:pointer;color:#9aa1ae;font-size:17px;line-height:1;width:18px;text-align:center;font-weight:700}
+#dedup-panel .dm-min:hover{color:#16181d}
+#dedup-panel.collapsed .dm-b{display:none}
+
+#dedup-panel .dm-b{padding:12px 13px 13px}
+#dedup-panel .dm-chip{font-size:12px;font-weight:700;padding:7px 10px;border-radius:9px;margin-bottom:10px;display:block}
+#dedup-panel .dm-chip.ok{background:#e3f6ee;color:#067a52}
+#dedup-panel .dm-chip.warn{background:#fdecea;color:#b42318}
+#dedup-panel .dm-chip.idle{background:#f4f5f8;color:#69707e}
+
+#dedup-panel .dm-f{display:block;margin-bottom:8px}
+#dedup-panel .dm-l{display:block;font-size:10.5px;font-weight:700;color:#69707e;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+#dedup-panel .dm-f input,#dedup-panel .dm-f select{
+  width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px 10px;
   border:1px solid #e6e8ec;border-radius:9px;outline:none;background:#fff;color:#16181d}
-#dedup-badge .dm-field input:focus,#dedup-badge .dm-field select:focus{
-  border-color:#2f54ff;box-shadow:0 0 0 3px #eef1ff}
+#dedup-panel .dm-f input.big{font-size:13.5px;padding:9px 11px}
+#dedup-panel .dm-f input:focus,#dedup-panel .dm-f select:focus{border-color:#5b5bd6;box-shadow:0 0 0 3px #ecedfb}
+
+#dedup-panel .dm-actions{display:flex;justify-content:flex-end;margin:-2px 0 8px}
+#dedup-panel .dm-more{margin:4px 0 10px;border-top:1px solid #eef0f4;padding-top:8px}
+#dedup-panel .dm-more>summary{cursor:pointer;font-size:11.5px;font-weight:700;color:#4a45c2;list-style:none;margin-bottom:8px}
+#dedup-panel .dm-more>summary::-webkit-details-marker{display:none}
+#dedup-panel .dm-more>summary:before{content:"▸ ";}
+#dedup-panel .dm-more[open]>summary:before{content:"▾ ";}
+
+#dedup-panel .dm-btn{width:100%;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;
+  font-size:13px;cursor:pointer;background:#5b5bd6;color:#fff;transition:filter .15s}
+#dedup-panel .dm-btn:hover{filter:brightness(1.06)}
+#dedup-panel .dm-btn:disabled{opacity:.5;cursor:not-allowed}
+#dedup-panel .dm-btn.ghost{width:auto;background:#fff;color:#16181d;border:1px solid #e6e8ec;padding:7px 14px;font-size:12px}
+#dedup-panel .dm-btn.ghost:hover{background:#f6f7f9;filter:none}
+#dedup-panel .dm-msg{font-size:11.5px;color:#69707e;min-height:15px;margin-top:7px;font-weight:600;text-align:center}

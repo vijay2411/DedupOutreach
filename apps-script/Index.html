@@ -249,28 +249,25 @@
           <div class="field"><label class="fl" for="f_phone">Phone</label>
             <div class="inwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
               <input id="f_phone" inputmode="tel" placeholder="+1 415 555 1234" oninput="onId()"></div></div>
-          <div class="field"><label class="fl" for="f_linkedin">LinkedIn</label>
-            <div class="inwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-              <input id="f_linkedin" placeholder="linkedin.com/in/…" oninput="onId()"></div></div>
+          <div class="field"><label class="fl" for="f_link">Profile link / handle</label>
+            <div class="inwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>
+              <input id="f_link" placeholder="linkedin · x.com · @handle…" oninput="onId()"></div></div>
           <div class="field"><label class="fl" for="f_email">Email</label>
             <div class="inwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
               <input id="f_email" inputmode="email" placeholder="jane@acme.com" oninput="onId()"></div></div>
         </div>
 
         <div class="grid3" style="margin-top:12px">
-          <div class="field"><label class="fl" for="f_handle">Other handle</label>
-            <div class="inwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-3.5 7.1"/></svg>
-              <input id="f_handle" placeholder="@slack · @twitter…" oninput="onId()"></div></div>
           <div class="field"><label class="fl" for="f_source">Source</label><select id="f_source" onchange="onId()"></select></div>
           <div class="field"><label class="fl" for="f_name">Name</label><input id="f_name" placeholder="Jane Doe" oninput="onId()"></div>
+          <div class="field"><label class="fl" for="f_company">Company</label><input id="f_company" placeholder="Acme"></div>
         </div>
 
         <details class="more" id="moreDet">
-          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>Optional — company &amp; stage</summary>
+          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>Optional — stage</summary>
           <div class="grid3" style="margin-top:14px">
-            <div class="field"><label class="fl" for="f_company">Company</label><input id="f_company" placeholder="Acme"></div>
             <div class="field"><label class="fl" for="f_status">Stage</label><select id="f_status"></select></div>
-            <div></div>
+            <div></div><div></div>
           </div>
         </details>
 
@@ -331,7 +328,7 @@
     ['reddit_strip_prefix','Normalize Reddit handles','Strip u/ and /user/, lowercase'],
     ['fuzzy_name_company','Fuzzy name + company','Merge same name + company without a shared id']
   ];
-  var PREFERRED=['name','company','phone','linkedin','email','reddit','handle','source','status','added_by','updated_at','notes'];
+  var PREFERRED=['name','company','link','phone','email','source','status','added_by','updated_at','notes'];
   var HIDDEN=['id','added_at','updated_by'];
   var STAGE_MAP={'new':'slate','contacted':'sky','replied':'violet','meeting':'amber','interested':'violet',
     'qualified':'teal','negotiating':'amber','won':'emerald','closed':'emerald','lost':'rose','no-reply':'slate','no reply':'slate'};
@@ -387,10 +384,10 @@
 
   // ── Check & Add: auto-check + instant one-click add ──────────
   var autoOn=true, lastHits=[], checkTimer=null, checkSeq=0;
-  function candidate(){return {phone:$('f_phone').value.trim(),linkedin:$('f_linkedin').value.trim(),
-    email:$('f_email').value.trim(),handle:$('f_handle').value.trim(),source:$('f_source').value,
+  function candidate(){return {phone:$('f_phone').value.trim(),link:$('f_link').value.trim(),
+    email:$('f_email').value.trim(),source:$('f_source').value,
     name:$('f_name').value.trim(),company:$('f_company').value.trim(),status:$('f_status').value}}
-  function hasId(c){return c.phone||c.linkedin||c.email||c.handle}
+  function hasId(c){return c.phone||c.email||c.link}
   function onAuto(){autoOn=$('autochk').checked;onId()}
 
   function onId(){
@@ -430,7 +427,7 @@
       (p.company?'<span style="color:var(--muted)"> · '+esc(p.company)+'</span>':'')+
       '<span class="grow"></span><span class="matchtag">matched '+esc(h.reason)+'</span>'+pill(p.status)+'</div>'+
       '<div class="meta"><span>owner '+esc(p.added_by)+'</span>'+ids(p)+'</div></div>'}
-  function ids(p){var out=['phone','linkedin','email','reddit','handle'].filter(function(f){return p[f]})
+  function ids(p){var out=['link','phone','email'].filter(function(f){return p[f]})
     .map(function(f){return '<span class="mono">'+esc(String(p[f]))+'</span>'});
     if(p.source) out.unshift('<span class="matchtag" style="background:#eef0f4;color:#48536b">'+esc(p.source)+'</span>');
     return out.join('')}
@@ -445,7 +442,7 @@
       else{toast('Error: '+res.error);btns.forEach(function(b){b.disabled=false})}
     }).apiUpsert(c);
   }
-  function resetForm(){['f_phone','f_linkedin','f_email','f_handle','f_name','f_company'].forEach(function(i){$(i).value=''});
+  function resetForm(){['f_phone','f_link','f_email','f_name','f_company'].forEach(function(i){$(i).value=''});
     if($('f_source'))$('f_source').selectedIndex=0; $('moreDet').open=false; hideAction()}
 
   // ── People ───────────────────────────────────────────────────
@@ -465,8 +462,8 @@
         if(k==='status'){var hue=HUE_COLORS[stageHue(c.status)];
           return '<td><select aria-label="Stage" style="background:'+hue[0]+';color:'+hue[1]+';border-color:transparent" onchange="updateStatus(\''+esc(c.id)+'\',this.value,this)">'+
             STAGES.map(function(s){return '<option'+(s===c.status?' selected':'')+'>'+esc(s)+'</option>'}).join('')+'</select></td>'}
-        if(k==='name')return '<td><div class="nm">'+esc(c.name||'—')+'</div>'+(c.linkedin||c.email?'<div class="sub mono">'+esc(c.linkedin||c.email)+'</div>':'')+'</td>';
-        if(k==='phone'||k==='email'||k==='linkedin'||k==='reddit'||k==='handle')return '<td'+cc+'><span class="mono">'+esc(trunc(c[k]))+'</span></td>';
+        if(k==='name')return '<td><div class="nm">'+esc(c.name||'—')+'</div>'+(c.link||c.email?'<div class="sub mono">'+esc(c.link||c.email)+'</div>':'')+'</td>';
+        if(k==='phone'||k==='email'||k==='link')return '<td'+cc+'><span class="mono">'+esc(trunc(c[k]))+'</span></td>';
         if(k==='updated_at')return '<td'+cc+'>'+fmtDate(c[k])+'</td>';
         return '<td'+cc+'>'+esc(trunc(c[k]))+'</td>';
       }).join('')+'<td><button class="del" aria-label="Delete '+esc(c.name||'person')+'" title="Delete" onclick="delPerson(\''+esc(c.id)+'\',this)">'+ICON.trash+'</button></td></tr>';
