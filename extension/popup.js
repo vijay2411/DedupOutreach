@@ -21,7 +21,12 @@ function load() {
   chrome.storage.local.get(
     ['me', 'apiUrl', 'apiKey', 'activeMode', 'lastSync', 'contacts', 'team'],
     function (s) {
-      fillTeam(getTeam(s.team), s.me);
+      var team = getTeam(s.team);
+      // Default "me" to the first teammate and PERSIST it, so the content
+      // script always has a name (the dropdown defaulting visually isn't enough).
+      var me = (s.me && team.indexOf(s.me) >= 0) ? s.me : team[0];
+      fillTeam(team, me);
+      if (s.me !== me) chrome.storage.local.set({ me: me });
       $('apiUrl').value = s.apiUrl || '';
       $('apiKey').value = s.apiKey || '';
       $('active').checked = s.activeMode !== false;

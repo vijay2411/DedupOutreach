@@ -9,10 +9,17 @@ var SYNC_MINUTES = 4;
 
 chrome.runtime.onInstalled.addListener(function () {
   chrome.alarms.create('sync', { periodInMinutes: SYNC_MINUTES });
-  sync();
+  ensureMe(); sync();
 });
-chrome.runtime.onStartup.addListener(sync);
+chrome.runtime.onStartup.addListener(function () { ensureMe(); sync(); });
 chrome.alarms.onAlarm.addListener(function (a) { if (a.name === 'sync') sync(); });
+
+/** Default the logged-in name to the first teammate if none is set yet. */
+async function ensureMe() {
+  var s = await chrome.storage.local.get(['me', 'team']);
+  if (Array.isArray(s.team) && s.team.length && (!s.me || s.team.indexOf(s.me) < 0))
+    await chrome.storage.local.set({ me: s.team[0] });
+}
 
 async function cfg() {
   return await chrome.storage.local.get(['apiUrl', 'apiKey', 'me']);
