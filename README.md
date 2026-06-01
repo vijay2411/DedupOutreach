@@ -71,8 +71,8 @@ I wanted a red flag *on the LinkedIn page itself*, backed by a Sheet I still own
 |---|---|---|
 | A Google account | Hosts the Sheet + Apps Script | Can you open sheets.new? |
 | Chrome (or Chromium) | Loads the extension | `chrome://extensions` opens |
-| ~15 min one-time setup | Deploy script, load extension | Follow [USAGE.md](USAGE.md) |
-| Node (optional) | Run the matcher tests | `node extension/matcher.test.js` |
+| Node + clasp (host only) | One-command backend deploy | `npm i -g @google/clasp && clasp login` |
+| ~5 min one-time setup | `./deploy.sh`, then teammates paste one config string | Follow [USAGE.md](USAGE.md) |
 
 ## 🧠 How it works under the hood
 

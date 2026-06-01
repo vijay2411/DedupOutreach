@@ -49,13 +49,21 @@
 
   <button class="btn" id="syncBtn">Sync now</button>
 
-  <details>
+  <details id="connDetails">
     <summary>Connection settings</summary>
-    <label>Apps Script web app URL (/exec)</label>
+
+    <label>Paste team config (easiest)</label>
+    <input id="importStr" placeholder="paste the config string from your host…">
+    <button class="btn" id="importBtn">Import config</button>
+
+    <hr>
+
+    <label>…or set manually — Apps Script URL (/exec)</label>
     <input id="apiUrl" placeholder="https://script.google.com/macros/s/…/exec">
     <label>Team API key</label>
     <input id="apiKey" type="password" placeholder="shared secret">
     <button class="btn ghost" id="saveCfg">Save connection</button>
+    <button class="btn ghost" id="exportBtn">Copy shareable config</button>
   </details>
 
   <div class="msg" id="msg"></div>
