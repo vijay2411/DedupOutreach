@@ -107,10 +107,10 @@
     F.chip = elt('div', 'dm-chip'); body.appendChild(F.chip);
 
     F.link = field(body, 'Profile link / @handle', 'linkedin · x.com · @handle…', true);
-    var checkRow = elt('div', 'dm-actions');
-    F.check = elt('button', 'dm-btn ghost', 'Check'); F.check.onclick = function () { check(true); };
-    checkRow.appendChild(F.check);
-    body.appendChild(checkRow);
+    F.checkRow = elt('div', 'dm-actions');
+    F.check = elt('button', 'dm-btn ghost', 'Check'); F.check.onclick = function () { check(); };
+    F.checkRow.appendChild(F.check);
+    body.appendChild(F.checkRow);
 
     var det = elt('details', 'dm-more'); var sum = elt('summary', null, 'More fields'); det.appendChild(sum);
     F.phone = field(det, 'Phone', '+1 415 555 1234');
@@ -125,8 +125,9 @@
     F.msg = elt('div', 'dm-msg'); body.appendChild(F.msg);
 
     document.body.appendChild(p);
-    F.link.el.addEventListener('input', function () { dirty = true; if (STATE.active) debouncedCheck(); });
-    [F.phone, F.email].forEach(function (f) { f.el.addEventListener('input', function () { dirty = true; }); });
+    [F.link, F.phone, F.email].forEach(function (f) {
+      f.el.addEventListener('input', function () { dirty = true; if (STATE.active) debouncedCheck(); });
+    });
   }
   function field(parent, label, ph, big) {
     var w = elt('label', 'dm-f'); w.appendChild(elt('span', 'dm-l', label));
@@ -152,6 +153,7 @@
     if (!F.mode) return;
     F.mode.textContent = STATE.active ? 'auto' : 'manual';
     F.mode.className = 'dm-mode ' + (STATE.active ? 'on' : 'off');
+    F.checkRow.style.display = STATE.active ? 'none' : '';   // auto = continuous, no button
     if (!STATE.active) { setChip('idle', 'Manual — type & check'); return; }
     var d = detect();
     var dk = d ? JSON.stringify(d) : 'none@' + location.href;

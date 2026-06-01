@@ -91,6 +91,7 @@ function ensureHeaders(sh) {
     sh.getRange(1, 1, 1, MANAGED_HEADERS.length).setValues([MANAGED_HEADERS]);
     return MANAGED_HEADERS.slice();
   }
+  cleanupDefaultSheet();
   headers = dropDeprecated(sh, headers);
   var missing = MANAGED_HEADERS.filter(function (h) { return headers.indexOf(h) === -1; });
   if (missing.length) {
@@ -99,6 +100,18 @@ function ensureHeaders(sh) {
   }
   ensureTextFormat(sh, headers.length);
   return headers;
+}
+
+/** One-time: delete the empty default "Sheet1" clasp created. */
+function cleanupDefaultSheet() {
+  var props = PropertiesService.getDocumentProperties();
+  if (props.getProperty('rm_sheet1')) return;
+  try {
+    var ss = book();
+    var s1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('Sheet 1');
+    if (s1 && ss.getSheets().length > 1) ss.deleteSheet(s1);
+  } catch (e) {}
+  props.setProperty('rm_sheet1', '1');
 }
 
 /** One-time: remove pre-merge columns (linkedin/reddit/handle) folded into `link`. */
