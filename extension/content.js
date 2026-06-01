@@ -106,15 +106,17 @@
     var body = elt('div', 'dm-b'); p.appendChild(body);
     F.chip = elt('div', 'dm-chip'); body.appendChild(F.chip);
 
+    // Primary identifiers — all visible, each auto-checks (check by any of them).
     F.link = field(body, 'Profile link / @handle', 'linkedin · x.com · @handle…', true);
+    F.phone = field(body, 'Phone', '+1 415 555 1234');
+    F.email = field(body, 'Email', 'jane@acme.com');
+
     F.checkRow = elt('div', 'dm-actions');
     F.check = elt('button', 'dm-btn ghost', 'Check'); F.check.onclick = function () { check(); };
     F.checkRow.appendChild(F.check);
     body.appendChild(F.checkRow);
 
-    var det = elt('details', 'dm-more'); var sum = elt('summary', null, 'More fields'); det.appendChild(sum);
-    F.phone = field(det, 'Phone', '+1 415 555 1234');
-    F.email = field(det, 'Email', 'jane@acme.com');
+    var det = elt('details', 'dm-more'); var sum = elt('summary', null, 'Name, company, source, stage'); det.appendChild(sum);
     F.name = field(det, 'Name', 'Jane Doe');
     F.company = field(det, 'Company', 'Acme');
     F.source = selField(det, 'Source', [''].concat(STATE.sources), '', true);
