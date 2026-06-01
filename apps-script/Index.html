@@ -8,169 +8,131 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --ink:#16181d; --muted:#6b7280;
-    --line:#e6e8ec; --accent:#2f54ff; --accent-soft:#eef1ff;
-    --ok:#0f9d58; --ok-soft:#e7f6ee; --warn:#d92d20; --warn-soft:#fdeceb;
-    --amber:#b25e09; --amber-soft:#fdf3e7; --radius:14px;
-    --shadow:0 1px 2px rgba(16,24,40,.04), 0 6px 24px rgba(16,24,40,.06);
+    --bg:#f6f7f9;--panel:#fff;--ink:#16181d;--muted:#6b7280;--line:#e6e8ec;
+    --accent:#2f54ff;--accent-soft:#eef1ff;--ok:#0f9d58;--ok-soft:#e7f6ee;
+    --warn:#d92d20;--warn-soft:#fdeceb;--amber:#b25e09;--amber-soft:#fdf3e7;
+    --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.04),0 6px 24px rgba(16,24,40,.06);
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;line-height:1.45}
-  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px}
-  .wrap{max-width:880px;margin:0 auto;padding:22px 18px 80px}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+  .wrap{max-width:1000px;margin:0 auto;padding:22px 18px 80px}
   header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
   .logo{width:30px;height:30px;border-radius:9px;background:var(--accent);
     display:grid;place-items:center;color:#fff;font-weight:800}
   h1{font-size:18px;margin:0;font-weight:800;letter-spacing:-.02em}
-  .sub{color:var(--muted);font-size:12px}
-  .spacer{flex:1}
+  .sub{color:var(--muted);font-size:12px}.spacer{flex:1}
   .me{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
-  .me select{font-family:inherit;border:1px solid var(--line);border-radius:9px;
-    padding:6px 9px;background:#fff;color:var(--ink);font-weight:600}
-  nav{display:flex;gap:4px;background:#eceef2;padding:4px;border-radius:12px;
-    margin-bottom:18px;width:fit-content}
-  nav button{border:0;background:transparent;padding:8px 16px;border-radius:9px;
-    font-family:inherit;font-weight:600;color:var(--muted);cursor:pointer;font-size:13px}
+  .me select{font-family:inherit;border:1px solid var(--line);border-radius:9px;padding:6px 9px;background:#fff;font-weight:600}
+  nav{display:flex;gap:4px;background:#eceef2;padding:4px;border-radius:12px;margin-bottom:18px;width:fit-content}
+  nav button{border:0;background:transparent;padding:8px 16px;border-radius:9px;font-family:inherit;font-weight:600;color:var(--muted);cursor:pointer;font-size:13px}
   nav button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
   label{display:block;font-weight:600;font-size:12px;margin:0 0 6px;color:#374151}
-  input,select,textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
-    border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;outline:none}
-  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-  .row{display:flex;gap:10px}.row>*{flex:1}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
-    border:0;border-radius:10px;padding:11px 16px;font-family:inherit;font-weight:700;
-    font-size:13.5px;cursor:pointer;background:var(--accent);color:#fff}
-  .btn:hover{filter:brightness(1.05)}
-  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .btn.ok{background:var(--ok)}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input,select,textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
   .field{margin-bottom:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:10px;padding:11px 16px;font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;background:var(--accent);color:#fff}
+  .btn:hover{filter:brightness(1.05)}.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ok{background:var(--ok)}.btn:disabled{opacity:.5;cursor:not-allowed}
   .hint{color:var(--muted);font-size:12px;margin-top:6px}
-  .verdict{border-radius:12px;padding:14px 16px;margin-top:14px;font-weight:600;
-    display:flex;align-items:flex-start;gap:10px}
+  .verdict{border-radius:12px;padding:14px 16px;margin-top:14px;font-weight:600;display:flex;gap:10px}
   .verdict.clear{background:var(--ok-soft);color:#0a6b3c}
   .verdict.dup{background:var(--warn-soft);color:#8f1d16}
   .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
   .dot.g{background:var(--ok)}.dot.r{background:var(--warn)}
-  .hit{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
-    margin-top:8px;display:flex;align-items:center;gap:10px;font-weight:500;color:var(--ink)}
-  .pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
-  .pill.sent{background:var(--amber-soft);color:var(--amber)}
-  .pill.replied{background:var(--ok-soft);color:#0a6b3c}
-  .pill.no-reply{background:#eef0f3;color:#5b6472}
-  .src{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
-  table{width:100%;border-collapse:collapse}
-  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
-    color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line)}
-  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .hit{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;color:var(--ink);font-weight:500}
+  .hit b{font-weight:700}.ids{font-size:11px;color:var(--muted);margin-top:3px}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;background:var(--accent-soft);color:var(--accent)}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;white-space:nowrap}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13px}
+  td.custom{background:#fbfbfc;color:#444}
+  th.custom{color:var(--amber)}
   tr:last-child td{border-bottom:0}
   td select{padding:5px 8px;border-radius:8px;font-size:12px;font-weight:600}
   .stat{display:flex;gap:14px;flex-wrap:wrap}
-  .kpi{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--line);
-    border-radius:12px;padding:16px}
-  .kpi .n{font-size:28px;font-weight:800;letter-spacing:-.02em}
-  .kpi .l{color:var(--muted);font-size:12px;font-weight:600;margin-top:2px}
+  .kpi{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .kpi .n{font-size:28px;font-weight:800}.kpi .l{color:var(--muted);font-size:12px;font-weight:600;margin-top:2px}
   .bar{height:8px;border-radius:6px;background:var(--accent);margin:4px 0}
   .barlabel{display:flex;justify-content:space-between;font-size:12px;margin-top:8px;font-weight:600}
-  .toggle{display:flex;align-items:center;justify-content:space-between;
-    padding:11px 0;border-bottom:1px solid var(--line)}
-  .toggle:last-of-type{border-bottom:0}
-  .toggle .t{font-weight:600}.toggle .d{color:var(--muted);font-size:12px}
-  .switch{position:relative;width:42px;height:24px;flex:none}
-  .switch input{opacity:0;width:0;height:0}
+  .toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
+  .toggle:last-of-type{border-bottom:0}.toggle .t{font-weight:600}.toggle .d{color:var(--muted);font-size:12px}
+  .switch{position:relative;width:42px;height:24px;flex:none}.switch input{opacity:0;width:0;height:0}
   .slider{position:absolute;inset:0;background:#cdd2da;border-radius:20px;transition:.15s;cursor:pointer}
-  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;
-    background:#fff;border-radius:50%;transition:.15s}
-  .switch input:checked+.slider{background:var(--accent)}
-  .switch input:checked+.slider:before{transform:translateX(18px)}
-  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:#16181d;color:#fff;padding:11px 18px;border-radius:11px;font-weight:600;
-    opacity:0;transition:.2s;pointer-events:none;font-size:13px}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .switch input:checked+.slider{background:var(--accent)}.switch input:checked+.slider:before{transform:translateX(18px)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:#16181d;color:#fff;padding:11px 18px;border-radius:11px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;font-size:13px}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .empty{color:var(--muted);text-align:center;padding:26px;font-weight:500}
   .hide{display:none}
+  .src{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="logo">D</div>
-    <div>
-      <h1>DedupManager</h1>
-      <div class="sub">Shared outreach dedup ledger</div>
-    </div>
+    <div><h1>DedupManager</h1><div class="sub">Shared outreach CRM · dedup on any identifier</div></div>
     <div class="spacer"></div>
-    <div class="me">I am
-      <select id="me" onchange="saveMe()"></select>
-    </div>
+    <div class="me">I am <select id="me" onchange="saveMe()"></select></div>
   </header>
 
   <nav>
     <button data-tab="check" class="on" onclick="tab('check')">Check &amp; Add</button>
-    <button data-tab="history" onclick="tab('history')">History</button>
+    <button data-tab="history" onclick="tab('history')">People</button>
     <button data-tab="stats" onclick="tab('stats')">Stats</button>
     <button data-tab="settings" onclick="tab('settings')">Settings</button>
   </nav>
 
-  <!-- CHECK & ADD -->
   <section id="t-check">
     <div class="card">
-      <div class="field">
-        <label>Who are you about to reach out to?</label>
-        <div class="row">
-          <input id="identifier" placeholder="LinkedIn URL, email, or u/handle…"
-                 oninput="guess()" onkeydown="if(event.key==='Enter')check()" style="flex:3">
-          <select id="source" style="flex:1">
-            <option value="auto">Auto-detect</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="email">Email</option>
-            <option value="reddit">Reddit</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="hint">Paste it and hit Check. We normalize before matching, so trailing slashes / query params / +tags don't fool it.</div>
+      <div class="hint" style="margin-bottom:12px">Fill in whatever you have — phone, LinkedIn, and email each dedup independently, so any one match flags the same person.</div>
+      <div class="grid">
+        <div class="field"><label>Name</label><input id="f_name" placeholder="Jane Doe"></div>
+        <div class="field"><label>Company</label><input id="f_company" placeholder="Acme"></div>
+        <div class="field"><label>Status / stage</label><select id="f_status"></select></div>
       </div>
-      <div class="row">
-        <div class="field"><label>Name (optional)</label><input id="name" placeholder="Jane Doe"></div>
-        <div class="field"><label>Company (optional)</label><input id="company" placeholder="Acme"></div>
+      <div class="grid">
+        <div class="field"><label>Phone</label><input id="f_phone" placeholder="+1 415 555 1234" oninput="liveCheck()"></div>
+        <div class="field"><label>LinkedIn</label><input id="f_linkedin" placeholder="linkedin.com/in/…" oninput="liveCheck()"></div>
+        <div class="field"><label>Email</label><input id="f_email" placeholder="jane@acme.com" oninput="liveCheck()"></div>
       </div>
-      <div class="row" style="align-items:flex-end">
+      <div style="display:flex;gap:10px;align-items:center">
         <button class="btn" onclick="check()">Check for duplicates</button>
         <button class="btn ghost" onclick="resetForm()">Clear</button>
+        <div class="hint" id="liveHint" style="margin:0"></div>
       </div>
       <div id="verdict"></div>
     </div>
   </section>
 
-  <!-- HISTORY -->
   <section id="t-history" class="hide">
     <div class="card">
-      <div class="field">
-        <label>Search the whole log</label>
-        <input id="q" placeholder="name, company, email, handle, teammate…"
-               oninput="debouncedSearch()">
-      </div>
-      <div id="historyList"><div class="empty">Loading…</div></div>
+      <div class="field"><label>Search people</label>
+        <input id="q" placeholder="name, company, phone, email, handle, teammate, or any column…" oninput="debouncedSearch()"></div>
+      <div class="tablewrap" id="historyList"><div class="empty">Loading…</div></div>
+      <div class="hint" style="margin-top:10px">Amber columns are ones you added in the Sheet — shown read-only here; edit them in the Sheet.</div>
     </div>
   </section>
 
-  <!-- STATS -->
   <section id="t-stats" class="hide">
     <div class="stat" id="kpis"></div>
     <div class="card"><label>By teammate</label><div id="byPerson"></div></div>
-    <div class="card"><label>By source</label><div id="bySource"></div></div>
+    <div class="card"><label>By stage</label><div id="byStage"></div></div>
   </section>
 
-  <!-- SETTINGS -->
   <section id="t-settings" class="hide">
     <div class="card">
-      <label style="margin-bottom:10px">Matching robustness</label>
+      <label>Stages (comma-separated, first is the default for new people)</label>
+      <input id="s_stages" placeholder="New,Contacted,Replied,Meeting,Won,Lost">
+      <div style="margin:16px 0 8px"><label>Matching robustness</label></div>
       <div id="knobs"></div>
       <div style="margin-top:16px"><button class="btn" onclick="saveSettings()">Save settings</button></div>
-      <div class="hint" style="margin-top:10px">These sync to the browser extension on its next refresh, so dedup strictness stays identical everywhere.</div>
+      <div class="hint" style="margin-top:10px">Syncs to everyone's extension on its next refresh.</div>
     </div>
   </section>
 </div>
@@ -178,132 +140,129 @@
 
 <script>
   var TEAM = ['Aman','Vedant','Teammate 3']; // edit to your names
-  var SETTINGS = {}, STATS_LOADED = false, lastVerdictCandidate = null;
-
+  var SETTINGS = {}, STAGES = [];
   var KNOBS = [
-    ['email_lowercase','Lowercase emails','Treat Jane@x.com and jane@x.com as one'],
     ['email_strip_plus','Ignore +tags in email','jane+sales@x.com → jane@x.com'],
     ['email_ignore_dots','Ignore dots in email','Gmail-style: j.a.ne@gmail → jane@gmail'],
     ['linkedin_slug_only','LinkedIn slug only','Match on /in/<slug>, ignore url noise'],
+    ['phone_match_last10','Phone: ignore country code','Compare last 10 digits'],
     ['reddit_strip_prefix','Normalize Reddit handles','Strip u/ and /user/, lowercase'],
     ['fuzzy_name_company','Fuzzy name + company','Also warn on same name + company (no shared id)']
   ];
+  var PREFERRED = ['name','company','phone','linkedin','email','reddit','status','added_by','updated_at','notes'];
+  var HIDDEN = ['id','added_at','updated_by'];
 
   function $(id){return document.getElementById(id)}
-
   function init(){
     var sel=$('me'); TEAM.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o)});
     var saved=localStorage.getItem('dedup_me'); if(saved) sel.value=saved;
-    google.script.run.withSuccessHandler(function(r){SETTINGS=r.settings||{};renderKnobs()}).apiBootstrap();
+    google.script.run.withSuccessHandler(function(r){
+      SETTINGS=r.settings||{}; STAGES=String(SETTINGS.stages||'New').split(',').map(function(s){return s.trim()}).filter(Boolean);
+      fillStages(); renderKnobs();
+    }).apiBootstrap();
   }
-
   function saveMe(){localStorage.setItem('dedup_me',$('me').value)}
-
+  function fillStages(){
+    $('f_status').innerHTML=STAGES.map(function(s){return '<option>'+esc(s)+'</option>'}).join('');
+  }
   function tab(name){
-    ['check','history','stats','settings'].forEach(function(t){
-      $('t-'+t).classList.toggle('hide',t!==name);
-    });
+    ['check','history','stats','settings'].forEach(function(t){$('t-'+t).classList.toggle('hide',t!==name)});
     document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===name)});
     if(name==='history') doSearch();
     if(name==='stats') loadStats();
-  }
-
-  function guessSource(v){
-    v=(v||'').toLowerCase();
-    if(v.indexOf('@')>-1 && v.indexOf('linkedin')===-1) return 'email';
-    if(v.indexOf('linkedin.com')>-1) return 'linkedin';
-    if(v.indexOf('reddit.com')>-1||/^\/?u\//.test(v)) return 'reddit';
-    return 'other';
-  }
-  function guess(){ if($('source').value==='auto'){} }
-  function effectiveSource(){
-    var s=$('source').value;
-    return s==='auto'?guessSource($('identifier').value):s;
+    if(name==='settings'){$('s_stages').value=SETTINGS.stages||''}
   }
 
   function candidate(){
-    return {source:effectiveSource(),identifier:$('identifier').value.trim(),
-      name:$('name').value.trim(),company:$('company').value.trim()};
+    return {name:$('f_name').value.trim(),company:$('f_company').value.trim(),
+      phone:$('f_phone').value.trim(),linkedin:$('f_linkedin').value.trim(),
+      email:$('f_email').value.trim(),status:$('f_status').value};
   }
+  function hasId(c){return c.phone||c.linkedin||c.email}
+
+  var liveTimer=null;
+  function liveCheck(){clearTimeout(liveTimer);liveTimer=setTimeout(function(){
+    var c=candidate(); if(!hasId(c)){$('liveHint').textContent='';return}
+    google.script.run.withSuccessHandler(function(r){
+      $('liveHint').textContent=r.hits.length?('⚠ '+r.hits.length+' possible match'):'✓ looks new';
+      $('liveHint').style.color=r.hits.length?'var(--warn)':'var(--ok)';
+    }).apiCheck(c);
+  },350)}
 
   function check(){
     var c=candidate();
-    if(!c.identifier){toast('Enter something to check');return}
-    lastVerdictCandidate=c;
+    if(!hasId(c)){toast('Enter a phone, LinkedIn, or email to check');return}
     $('verdict').innerHTML='<div class="hint">Checking…</div>';
-    google.script.run.withSuccessHandler(renderVerdict).apiCheck(c);
+    google.script.run.withSuccessHandler(function(r){renderVerdict(c,r)}).apiCheck(c);
   }
-
-  function renderVerdict(r){
-    var c=lastVerdictCandidate;
-    var addBtn='<button class="btn ok" style="margin-top:12px" onclick="logIt()">Log it under '+esc($('me').value)+'</button>';
+  function renderVerdict(c,r){
+    var saveBtn='<button class="btn ok" style="margin-top:12px" onclick="save()">'+
+      (r.hits.length?'Merge into existing record':'Add new person')+'</button>';
     if(!r.hits.length){
-      $('verdict').innerHTML='<div class="verdict clear"><span class="dot g"></span>'+
-        '<div><div>No one has approached this person yet.</div>'+
-        '<div style="font-weight:500;opacity:.8">Source: '+esc(c.source)+' · key: <span class="mono">'+esc(r.candidate.id_normalized)+'</span></div>'+
-        addBtn+'</div></div>';
+      $('verdict').innerHTML='<div class="verdict clear"><span class="dot g"></span><div>'+
+        '<div>No existing person matches. Safe to reach out.</div>'+saveBtn+'</div></div>';
       return;
     }
-    var rows=r.hits.map(function(h){var c2=h.contact;return ''+
-      '<div class="hit"><span class="src">'+esc(c2.source)+'</span>'+
-      '<div style="flex:1"><b>'+esc(c2.name||c2.identifier)+'</b>'+
-      (c2.company?' · '+esc(c2.company):'')+
-      '<div class="hint">by '+esc(c2.added_by)+' · '+fmtDate(c2.added_at)+
-      (h.reason==='name+company'?' · <i>fuzzy name+company</i>':'')+'</div></div>'+
-      '<span class="pill '+esc(c2.status)+'">'+esc(c2.status)+'</span></div>';
+    var rows=r.hits.map(function(h){var p=h.contact;return '<div class="hit">'+
+      '<div style="display:flex;align-items:center;gap:8px"><b>'+esc(p.name||'(no name)')+'</b>'+
+      (p.company?' · '+esc(p.company):'')+'<span class="spacer" style="flex:1"></span>'+
+      '<span class="pill">'+esc(p.status||'')+'</span></div>'+
+      '<div class="ids">owner '+esc(p.added_by)+' · matched on '+esc(h.reason)+
+      ' · '+ids(p)+'</div></div>';
     }).join('');
-    $('verdict').innerHTML='<div class="verdict dup"><span class="dot r"></span>'+
-      '<div style="flex:1"><div>⚠ Already approached '+r.hits.length+' time(s).</div>'+rows+
-      '<div style="margin-top:6px">'+addBtn.replace('Log it','Log anyway')+'</div></div></div>';
+    $('verdict').innerHTML='<div class="verdict dup"><span class="dot r"></span><div style="flex:1">'+
+      '<div>⚠ Already in the system ('+r.hits.length+'). Saving will merge new fields into the existing record.</div>'+
+      rows+saveBtn+'</div></div>';
+  }
+  function ids(p){
+    return ['phone','linkedin','email','reddit'].filter(function(f){return p[f]}).map(function(f){return f+':'+esc(String(p[f]))}).join(' · ')||'no identifiers';
   }
 
-  function logIt(){
+  function save(){
     var c=candidate(); c.added_by=$('me').value;
     google.script.run.withSuccessHandler(function(res){
-      if(res.ok){toast('Logged ✓');resetForm()}else{toast('Error: '+res.error)}
-    }).apiAdd(c);
+      if(res.ok){toast(res.merged?('Merged into existing record ✓'):'Added ✓');resetForm()}
+      else toast('Error: '+res.error);
+    }).apiUpsert(c);
   }
+  function resetForm(){['f_name','f_company','f_phone','f_linkedin','f_email'].forEach(function(i){$(i).value=''});
+    $('verdict').innerHTML='';$('liveHint').textContent=''}
 
-  function resetForm(){['identifier','name','company'].forEach(function(i){$(i).value=''});
-    $('source').value='auto';$('verdict').innerHTML='';lastVerdictCandidate=null}
-
-  // History
+  // People table
   var searchTimer=null;
   function debouncedSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(doSearch,220)}
-  function doSearch(){
-    google.script.run.withSuccessHandler(renderHistory).apiSearch($('q').value);
-  }
+  function doSearch(){google.script.run.withSuccessHandler(renderHistory).apiSearch($('q').value)}
   function renderHistory(r){
-    if(!r.contacts.length){$('historyList').innerHTML='<div class="empty">No matches yet.</div>';return}
-    var rows=r.contacts.map(function(c){return ''+
-      '<tr><td><span class="src">'+esc(c.source)+'</span></td>'+
-      '<td><b>'+esc(c.name||'—')+'</b><div class="mono" style="color:var(--muted)">'+esc(c.identifier)+'</div></td>'+
-      '<td>'+esc(c.company||'')+'</td>'+
-      '<td>'+esc(c.added_by)+'<div class="hint">'+fmtDate(c.added_at)+'</div></td>'+
-      '<td><select onchange="updateStatus(\''+c.id+'\',this.value)">'+
-        opt('sent',c.status)+opt('replied',c.status)+opt('no-reply',c.status)+'</select></td></tr>';
+    if(!r.contacts.length){$('historyList').innerHTML='<div class="empty">No people yet.</div>';return}
+    var keys={}; r.contacts.forEach(function(c){Object.keys(c).forEach(function(k){keys[k]=1})});
+    var cols=PREFERRED.filter(function(k){return keys[k]})
+      .concat(Object.keys(keys).filter(function(k){return PREFERRED.indexOf(k)<0 && HIDDEN.indexOf(k)<0}));
+    var custom=cols.filter(function(k){return PREFERRED.indexOf(k)<0});
+    var head=cols.map(function(k){return '<th'+(custom.indexOf(k)>=0?' class="custom"':'')+'>'+esc(k)+'</th>'}).join('');
+    var body=r.contacts.map(function(c){
+      return '<tr>'+cols.map(function(k){
+        if(k==='status') return '<td><select onchange="updateStatus(\''+esc(c.id)+'\',this.value)">'+
+          STAGES.map(function(s){return '<option'+(s===c.status?' selected':'')+'>'+esc(s)+'</option>'}).join('')+'</select></td>';
+        if(k==='updated_at') return '<td>'+fmtDate(c[k])+'</td>';
+        var cls=custom.indexOf(k)>=0?' class="custom"':'';
+        return '<td'+cls+'>'+esc(trunc(c[k]))+'</td>';
+      }).join('')+'</tr>';
     }).join('');
-    $('historyList').innerHTML='<table><thead><tr><th>Src</th><th>Contact</th><th>Company</th><th>By</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    $('historyList').innerHTML='<table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table>';
   }
-  function opt(v,cur){return '<option value="'+v+'"'+(v===cur?' selected':'')+'>'+v+'</option>'}
+  function trunc(v){v=v==null?'':String(v);return v.length>60?v.slice(0,57)+'…':v}
   function updateStatus(id,status){
-    google.script.run.withSuccessHandler(function(){toast('Updated')}).apiUpdate({id:id,status:status});
+    google.script.run.withSuccessHandler(function(){toast('Updated')}).apiUpdate({id:id,status:status,added_by:$('me').value});
   }
 
-  // Stats
   function loadStats(){
     google.script.run.withSuccessHandler(function(s){
-      $('kpis').innerHTML=
-        kpi(s.total,'Total approaches')+
-        kpi(Object.keys(s.byPerson).length,'Active teammates')+
-        kpi(Object.keys(s.bySource).length,'Channels used')+
-        kpi(s.collisions,'Double-touches caught');
-      $('byPerson').innerHTML=bars(s.byPerson,s.total);
-      $('bySource').innerHTML=bars(s.bySource,s.total);
+      $('kpis').innerHTML=kpi(s.total,'People')+kpi(Object.keys(s.byPerson).length,'Teammates')+kpi(Object.keys(s.byStage).length,'Stages in use');
+      $('byPerson').innerHTML=bars(s.byPerson);$('byStage').innerHTML=bars(s.byStage);
     }).apiStats();
   }
   function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'}
-  function bars(obj,total){
+  function bars(obj){
     var keys=Object.keys(obj).sort(function(a,b){return obj[b]-obj[a]});
     if(!keys.length)return '<div class="empty">No data yet.</div>';
     var max=Math.max.apply(null,keys.map(function(k){return obj[k]}));
@@ -311,29 +270,27 @@
       '<div class="bar" style="width:'+Math.max(6,obj[k]/max*100)+'%"></div>'}).join('');
   }
 
-  // Settings
   function renderKnobs(){
-    $('knobs').innerHTML=KNOBS.map(function(k){
-      var on=!!SETTINGS[k[0]];
+    $('knobs').innerHTML=KNOBS.map(function(k){var on=!!SETTINGS[k[0]];
       return '<div class="toggle"><div><div class="t">'+k[1]+'</div><div class="d">'+k[2]+'</div></div>'+
-        '<label class="switch"><input type="checkbox" id="k_'+k[0]+'"'+(on?' checked':'')+
-        '><span class="slider"></span></label></div>';
+        '<label class="switch"><input type="checkbox" id="k_'+k[0]+'"'+(on?' checked':'')+'><span class="slider"></span></label></div>';
     }).join('')+
-    '<div class="toggle"><div><div class="t">Fuzzy threshold</div><div class="d">How close names/companies must be (0.7 loose – 0.95 strict)</div></div>'+
+    '<div class="toggle"><div><div class="t">Fuzzy threshold</div><div class="d">0.7 loose – 0.95 strict</div></div>'+
     '<input id="k_fuzzy_threshold" type="number" step="0.05" min="0.5" max="0.99" value="'+(SETTINGS.fuzzy_threshold||0.85)+'" style="width:90px"></div>';
   }
   function saveSettings(){
-    var patch={};
-    KNOBS.forEach(function(k){patch[k[0]]=$('k_'+k[0]).checked});
+    var patch={}; KNOBS.forEach(function(k){patch[k[0]]=$('k_'+k[0]).checked});
     patch.fuzzy_threshold=Number($('k_fuzzy_threshold').value)||0.85;
-    google.script.run.withSuccessHandler(function(r){SETTINGS=r.settings;toast('Settings saved')}).apiSettings(patch);
+    patch.stages=$('s_stages').value.trim()||SETTINGS.stages;
+    google.script.run.withSuccessHandler(function(r){
+      SETTINGS=r.settings; STAGES=String(SETTINGS.stages||'New').split(',').map(function(s){return s.trim()}).filter(Boolean);
+      fillStages(); toast('Settings saved');
+    }).apiSettings(patch);
   }
 
-  // utils
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]})}
-  function fmtDate(iso){var d=new Date(iso);return isNaN(d)?String(iso):d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}
+  function fmtDate(iso){var d=new Date(iso);return isNaN(d)?esc(iso):d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}
   function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},1800)}
-
   init();
 </script>
 </body>

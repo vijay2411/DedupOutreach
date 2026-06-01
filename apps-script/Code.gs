@@ -1,42 +1,37 @@
 /**
- * DedupManager — Apps Script backend + web app host.
+ * DedupManager — Apps Script backend + web app host (person-centric CRM).
  *
- * Deploy: Extensions > Apps Script (from your Google Sheet), paste these files,
- * then Deploy > New deployment > Web app, "Execute as: Me",
- * "Who has access: Anyone". Copy the /exec URL into the extension + web UI.
+ * One row per PERSON. A person can carry name/company/phone/linkedin/email/reddit
+ * plus a status (stage). You may add ANY extra columns in the Sheet (call notes,
+ * insights, stage detail…) — the app never reorders or overwrites them; it only
+ * touches the columns it manages, and shows the rest read-only in the dashboard.
  *
- * Security: every request must carry the shared API key (see API_KEY below).
+ * Deploy with deploy.sh, or manually (see USAGE.md). The team secret lives in
+ * Config.gs as `var TEAM_API_KEY = '...'`.
  */
 
-// ── Config ────────────────────────────────────────────────────────────────
-// The team secret lives in Config.gs as `var TEAM_API_KEY = '...'`.
-//   • deploy.sh generates Config.gs automatically.
-//   • Manual install: copy Config.example.gs → Config.gs and set the key.
 function getApiKey() {
   return (typeof TEAM_API_KEY !== 'undefined' && TEAM_API_KEY)
     ? TEAM_API_KEY : 'CHANGE_ME_set_in_Config_gs';
 }
 
-// Leave blank to use the Sheet this script is bound to (recommended).
-var SHEET_ID = '';
-
+var SHEET_ID = '';                 // blank = the Sheet this script is bound to
 var CONTACTS_SHEET = 'Contacts';
 var SETTINGS_SHEET = 'Settings';
 
-var CONTACT_HEADERS = [
-  'id', 'added_by', 'added_at', 'source', 'identifier',
-  'id_normalized', 'name', 'company', 'status', 'notes'
+// Columns the app manages. Anything else in the sheet is user-owned & preserved.
+var MANAGED_HEADERS = [
+  'id', 'name', 'company', 'phone', 'linkedin', 'email', 'reddit',
+  'status', 'added_by', 'added_at', 'updated_at', 'updated_by', 'notes'
 ];
+// Fields a write request is allowed to set on a managed row.
+var EDITABLE_FIELDS = ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'status', 'notes'];
 
 var DEFAULT_SETTINGS = {
-  email_lowercase: true,
-  email_strip_plus: true,
-  email_ignore_dots: false,
-  linkedin_slug_only: true,
-  reddit_strip_prefix: true,
-  fuzzy_name_company: false,
-  fuzzy_threshold: 0.85,
-  match_logic: 'any'
+  email_lowercase: true, email_strip_plus: true, email_ignore_dots: false,
+  linkedin_slug_only: true, reddit_strip_prefix: true, phone_match_last10: true,
+  fuzzy_name_company: false, fuzzy_threshold: 0.85,
+  stages: 'New,Contacted,Replied,Meeting,Won,Lost'
 };
 
 // ── Entry points ────────────────────────────────────────────────────────────
@@ -44,7 +39,6 @@ var DEFAULT_SETTINGS = {
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'app';
   if (action === 'app') return serveApp();
-
   if (!authed(e)) return json({ ok: false, error: 'unauthorized' });
   if (action === 'log') return json({ ok: true, contacts: readContacts() });
   if (action === 'settings') return json({ ok: true, settings: readSettings() });
@@ -57,18 +51,14 @@ function doPost(e) {
   var body = {};
   try { body = JSON.parse(e.postData.contents); } catch (err) {}
   if (!authed({ parameter: body })) return json({ ok: false, error: 'unauthorized' });
-
-  var action = body.action;
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (action === 'add') return json(addContact(body));
-    if (action === 'update') return json(updateContact(body));
-    if (action === 'settings') return json(writeSettings(body.settings || {}));
-    return json({ ok: false, error: 'unknown action: ' + action });
-  } finally {
-    lock.releaseLock();
-  }
+    if (body.action === 'add' || body.action === 'upsert') return json(upsertContact(body));
+    if (body.action === 'update') return json(updateContact(body));
+    if (body.action === 'settings') return json(writeSettings(body.settings || {}));
+    return json({ ok: false, error: 'unknown action: ' + body.action });
+  } finally { lock.releaseLock(); }
 }
 
 function authed(e) {
@@ -76,43 +66,84 @@ function authed(e) {
   return key && key === getApiKey();
 }
 
-// ── Data access ─────────────────────────────────────────────────────────────
+// ── Sheet access ────────────────────────────────────────────────────────────
 
 function book() {
   return SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActive();
 }
 
-function sheet(name, headers) {
+function sheet(name) {
   var ss = book();
   var sh = ss.getSheetByName(name);
-  if (!sh) {
-    sh = ss.insertSheet(name);
-    if (headers) sh.appendRow(headers);
-  }
+  if (!sh) sh = ss.insertSheet(name);
   return sh;
 }
 
-function readContacts() {
-  var sh = sheet(CONTACTS_SHEET, CONTACT_HEADERS);
-  var values = sh.getDataRange().getValues();
-  if (values.length < 2) return [];
-  var headers = values[0];
-  return values.slice(1).map(function (row) {
-    var obj = {};
-    headers.forEach(function (h, i) { obj[h] = row[i]; });
-    if (obj.added_at instanceof Date) obj.added_at = obj.added_at.toISOString();
-    return obj;
+/** Ensure managed columns exist without disturbing user columns. Returns headers. */
+function ensureHeaders(sh) {
+  var lastCol = sh.getLastColumn();
+  var headers = lastCol > 0 ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  if (!headers.length || headers.join('') === '') {
+    sh.getRange(1, 1, 1, MANAGED_HEADERS.length).setValues([MANAGED_HEADERS]);
+    return MANAGED_HEADERS.slice();
+  }
+  var missing = MANAGED_HEADERS.filter(function (h) { return headers.indexOf(h) === -1; });
+  if (missing.length) {
+    sh.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+    headers = headers.concat(missing);
+  }
+  return headers;
+}
+
+function readWithRows(sh, headers) {
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var values = sh.getRange(2, 1, last - 1, headers.length).getValues();
+  return values.map(function (row, i) {
+    var o = { _row: i + 2 };
+    headers.forEach(function (h, j) {
+      var v = row[j];
+      if (v instanceof Date) v = v.toISOString();
+      o[h] = v;
+    });
+    return o;
   });
 }
+
+function readContacts() {
+  var sh = sheet(CONTACTS_SHEET);
+  var headers = ensureHeaders(sh);
+  return readWithRows(sh, headers).map(function (o) {
+    var c = {}; for (var k in o) if (k !== '_row') c[k] = o[k]; return c;
+  });
+}
+
+function appendRecord(sh, headers, record) {
+  sh.appendRow(headers.map(function (h) { return record[h] !== undefined ? record[h] : ''; }));
+}
+
+function applyPatch(sh, headers, rowNum, patch) {
+  Object.keys(patch).forEach(function (k) {
+    var col = headers.indexOf(k);
+    if (col > -1) sh.getRange(rowNum, col + 1).setValue(patch[k]);
+  });
+}
+
+function appendNote(existing, who, text) {
+  if (!text) return existing;
+  var stamp = '[' + (who || '?') + '] ' + text;
+  return existing ? (existing + '\n' + stamp) : stamp;
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
 
 function readSettings() {
   var sh = sheet(SETTINGS_SHEET);
   if (sh.getLastRow() < 1) seedSettings(sh);
   var values = sh.getDataRange().getValues();
-  var out = {};
-  for (var k in DEFAULT_SETTINGS) out[k] = DEFAULT_SETTINGS[k];
+  var out = {}; for (var k in DEFAULT_SETTINGS) out[k] = DEFAULT_SETTINGS[k];
   values.forEach(function (row) {
-    if (row[0] === 'key' && row[1] === 'value') return; // header
+    if (row[0] === 'key' && row[1] === 'value') return;
     if (row[0]) out[row[0]] = coerce(row[1]);
   });
   return out;
@@ -121,51 +152,13 @@ function readSettings() {
 function coerce(v) {
   if (v === 'true' || v === true) return true;
   if (v === 'false' || v === false) return false;
-  if (v !== '' && !isNaN(v)) return Number(v);
+  if (v !== '' && v !== null && !isNaN(v) && typeof v !== 'boolean') return Number(v);
   return v;
 }
 
 function seedSettings(sh) {
   sh.appendRow(['key', 'value']);
   for (var k in DEFAULT_SETTINGS) sh.appendRow([k, DEFAULT_SETTINGS[k]]);
-}
-
-function addContact(body) {
-  var settings = readSettings();
-  var source = body.source || 'other';
-  var id = Utilities.getUuid().slice(0, 8);
-  var idNorm = normalizeId(source, body.identifier, settings);
-  var row = [
-    id,
-    body.added_by || 'unknown',
-    new Date().toISOString(),
-    source,
-    body.identifier || '',
-    idNorm,
-    body.name || '',
-    body.company || '',
-    body.status || 'sent',
-    body.notes || ''
-  ];
-  sheet(CONTACTS_SHEET, CONTACT_HEADERS).appendRow(row);
-  return { ok: true, id: id, id_normalized: idNorm };
-}
-
-function updateContact(body) {
-  var sh = sheet(CONTACTS_SHEET, CONTACT_HEADERS);
-  var values = sh.getDataRange().getValues();
-  var headers = values[0];
-  var idCol = headers.indexOf('id');
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][idCol]) === String(body.id)) {
-      if (body.status !== undefined)
-        sh.getRange(i + 1, headers.indexOf('status') + 1).setValue(body.status);
-      if (body.notes !== undefined)
-        sh.getRange(i + 1, headers.indexOf('notes') + 1).setValue(body.notes);
-      return { ok: true, id: body.id };
-    }
-  }
-  return { ok: false, error: 'id not found: ' + body.id };
 }
 
 function writeSettings(patch) {
@@ -181,7 +174,125 @@ function writeSettings(patch) {
   return { ok: true, settings: readSettings() };
 }
 
-// ── Web app host ────────────────────────────────────────────────────────────
+function firstStage(settings) {
+  var s = String(settings.stages || DEFAULT_SETTINGS.stages).split(',')[0];
+  return (s || 'New').trim();
+}
+
+// ── Upsert (the core merge) ─────────────────────────────────────────────────
+
+function upsertContact(body) {
+  var settings = readSettings();
+  var sh = sheet(CONTACTS_SHEET);
+  var headers = ensureHeaders(sh);
+  var rows = readWithRows(sh, headers);
+
+  var cand = candidateFrom(body);
+  var matchIdx = -1, reason = '';
+  for (var i = 0; i < rows.length; i++) {
+    var m = matchPerson(cand, rows[i], settings);
+    if (m.hit) { matchIdx = i; reason = m.reason; break; }
+  }
+
+  if (matchIdx > -1) {
+    var row = rows[matchIdx];
+    var patch = {};
+    ['name', 'company', 'phone', 'linkedin', 'email', 'reddit'].forEach(function (f) {
+      if (!String(row[f] || '').trim() && body[f]) patch[f] = body[f]; // fill blanks only
+    });
+    if (body.status) patch.status = body.status;
+    if (body.notes) patch.notes = appendNote(row.notes, body.added_by, body.notes);
+    patch.updated_at = new Date().toISOString();
+    patch.updated_by = body.added_by || '';
+    applyPatch(sh, headers, row._row, patch);
+    return { ok: true, merged: true, reason: reason, id: row.id };
+  }
+
+  var id = Utilities.getUuid().slice(0, 8);
+  var now = new Date().toISOString();
+  appendRecord(sh, headers, {
+    id: id, name: body.name || '', company: body.company || '',
+    phone: body.phone || '', linkedin: body.linkedin || '', email: body.email || '',
+    reddit: body.reddit || '', status: body.status || firstStage(settings),
+    added_by: body.added_by || 'unknown', added_at: now, updated_at: now,
+    updated_by: body.added_by || '', notes: body.notes || ''
+  });
+  return { ok: true, merged: false, id: id };
+}
+
+function candidateFrom(body) {
+  return {
+    name: body.name || '', company: body.company || '', phone: body.phone || '',
+    linkedin: body.linkedin || '', email: body.email || '', reddit: body.reddit || ''
+  };
+}
+
+function updateContact(body) {
+  var sh = sheet(CONTACTS_SHEET);
+  var headers = ensureHeaders(sh);
+  var rows = readWithRows(sh, headers);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].id) === String(body.id)) {
+      var patch = {};
+      EDITABLE_FIELDS.forEach(function (f) { if (body[f] !== undefined) patch[f] = body[f]; });
+      patch.updated_at = new Date().toISOString();
+      patch.updated_by = body.updated_by || body.added_by || '';
+      applyPatch(sh, headers, rows[i]._row, patch);
+      return { ok: true, id: body.id };
+    }
+  }
+  return { ok: false, error: 'id not found: ' + body.id };
+}
+
+// ── Web-UI server calls (google.script.run; inside an authed Google session) ─
+
+function apiBootstrap() { return { contacts: readContacts(), settings: readSettings() }; }
+function apiUpsert(body) { return upsertContact(body); }
+function apiUpdate(body) { return updateContact(body); }
+function apiSettings(s) { return writeSettings(s); }
+
+function apiCheck(candidate) {
+  var settings = readSettings();
+  var cand = candidateFrom(candidate);
+  var hits = [];
+  readContacts().forEach(function (c) {
+    var m = matchPerson(cand, c, settings);
+    if (m.hit) hits.push({ contact: c, reason: m.reason });
+  });
+  return { ok: true, hits: hits };
+}
+
+function apiSearch(query) {
+  var q = (query || '').trim().toLowerCase();
+  var rows = readContacts();
+  if (!q) return { ok: true, contacts: rows.slice(-300).reverse() };
+  var hits = rows.filter(function (c) {
+    return Object.keys(c).some(function (k) {
+      return String(c[k] == null ? '' : c[k]).toLowerCase().indexOf(q) !== -1;
+    });
+  });
+  return { ok: true, contacts: hits.reverse() };
+}
+
+function apiStats() {
+  var rows = readContacts();
+  var byPerson = {}, byStage = {};
+  rows.forEach(function (c) {
+    byPerson[c.added_by] = (byPerson[c.added_by] || 0) + 1;
+    var st = c.status || '(none)';
+    byStage[st] = (byStage[st] || 0) + 1;
+  });
+  return { ok: true, total: rows.length, byPerson: byPerson, byStage: byStage };
+}
+
+/** Custom (user-added) column names, for read-only display in the dashboard. */
+function customColumns() {
+  var sh = sheet(CONTACTS_SHEET);
+  var headers = ensureHeaders(sh);
+  return headers.filter(function (h) { return MANAGED_HEADERS.indexOf(h) === -1 && h !== ''; });
+}
+
+// ── Host ─────────────────────────────────────────────────────────────────────
 
 function serveApp() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -195,136 +306,95 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── Server-side calls used by the web UI (google.script.run) ────────────────
-// These skip the API key (already inside an authenticated Google session).
-
-function apiBootstrap() { return { contacts: readContacts(), settings: readSettings() }; }
-function apiAdd(body)   { return addContact(body); }
-function apiUpdate(body){ return updateContact(body); }
-function apiSettings(s) { return writeSettings(s); }
-
-/** Dedup check used by the web UI: returns prior approaches that collide. */
-function apiCheck(candidate) {
-  var settings = readSettings();
-  var cand = {
-    source: candidate.source || 'other',
-    id_normalized: normalizeId(candidate.source, candidate.identifier, settings),
-    name: candidate.name || '',
-    company: candidate.company || ''
-  };
-  var hits = [];
-  readContacts().forEach(function (c) {
-    var m = matchEntry(cand, c, settings);
-    if (m.hit) hits.push({ contact: c, reason: m.reason });
-  });
-  return { ok: true, candidate: cand, hits: hits };
-}
-
-/** Free-text search across the log. */
-function apiSearch(query) {
-  var q = (query || '').trim().toLowerCase();
-  var rows = readContacts();
-  if (!q) return { ok: true, contacts: rows.slice(-200).reverse() };
-  var hits = rows.filter(function (c) {
-    return [c.identifier, c.id_normalized, c.name, c.company, c.added_by, c.source]
-      .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
-  });
-  return { ok: true, contacts: hits.reverse() };
-}
-
-function apiStats() {
-  var rows = readContacts();
-  var byPerson = {}, bySource = {}, byWeek = {}, normCount = {};
-  rows.forEach(function (c) {
-    byPerson[c.added_by] = (byPerson[c.added_by] || 0) + 1;
-    bySource[c.source] = (bySource[c.source] || 0) + 1;
-    var wk = isoWeek(c.added_at);
-    byWeek[wk] = (byWeek[wk] || 0) + 1;
-    if (c.id_normalized) normCount[c.id_normalized] = (normCount[c.id_normalized] || 0) + 1;
-  });
-  var collisions = 0;
-  for (var k in normCount) if (normCount[k] > 1) collisions += normCount[k] - 1;
-  return { ok: true, total: rows.length, byPerson: byPerson, bySource: bySource,
-           byWeek: byWeek, collisions: collisions };
-}
-
-function isoWeek(iso) {
-  var d = new Date(iso);
-  if (isNaN(d)) return 'unknown';
-  var onejan = new Date(d.getFullYear(), 0, 1);
-  var wk = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-  return d.getFullYear() + '-W' + (wk < 10 ? '0' + wk : wk);
-}
-
-/** Run once from the editor to create tabs + headers (optional — also lazy-created). */
+/** Optional: run once from the editor to create tabs (also lazy-created). */
 function setup() {
-  sheet(CONTACTS_SHEET, CONTACT_HEADERS);
+  ensureHeaders(sheet(CONTACTS_SHEET));
   var s = sheet(SETTINGS_SHEET);
   if (s.getLastRow() < 1) seedSettings(s);
   return 'ready';
 }
 
 // ── Matching engine ─────────────────────────────────────────────────────────
-// Kept algorithmically identical to extension/matcher.js so the web app and the
-// browser extension dedup the exact same way. Mirror any change to both.
+// Kept algorithmically identical to extension/matcher.js. Mirror any change.
 
-function normalizeId(source, identifier, settings) {
-  var raw = (identifier || '').trim();
+var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit'];
+
+function normalizeField(field, value, settings) {
+  var raw = (value == null ? '' : String(value)).trim();
   if (!raw) return '';
-  source = (source || 'other').toLowerCase();
-
-  if (source === 'email') {
-    var at = raw.indexOf('@');
-    if (at === -1) return settings.email_lowercase ? raw.toLowerCase() : raw;
-    var local = raw.slice(0, at), domain = raw.slice(at + 1);
-    if (settings.email_lowercase) { local = local.toLowerCase(); domain = domain.toLowerCase(); }
-    if (settings.email_strip_plus) local = local.split('+')[0];
-    if (settings.email_ignore_dots) local = local.replace(/\./g, '');
-    return local + '@' + domain;
-  }
-  if (source === 'linkedin') {
-    var m = raw.match(/\/in\/([^/?#]+)/i);
-    if (m && settings.linkedin_slug_only) return 'in/' + m[1].toLowerCase();
-    return stripUrl(raw);
-  }
-  if (source === 'reddit') {
-    var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
-    var handle = r ? r[1] : raw.replace(/^\/?(u\/|user\/)/i, '');
-    return settings.reddit_strip_prefix ? handle.replace(/^@/, '').toLowerCase() : handle;
-  }
-  return stripUrl(raw);
+  settings = settings || {};
+  if (field === 'email') return normEmail_(raw, settings);
+  if (field === 'phone') return normPhone_(raw, settings);
+  if (field === 'linkedin') return normLinkedin_(raw, settings);
+  if (field === 'reddit') return normReddit_(raw, settings);
+  return stripUrl_(raw);
 }
 
-function stripUrl(s) {
-  return s.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
-          .split(/[?#]/)[0].replace(/\/+$/, '').toLowerCase();
+function normEmail_(raw, s) {
+  var at = raw.indexOf('@');
+  if (at === -1) return s.email_lowercase ? raw.toLowerCase() : raw;
+  var local = raw.slice(0, at), domain = raw.slice(at + 1);
+  if (s.email_lowercase !== false) { local = local.toLowerCase(); domain = domain.toLowerCase(); }
+  if (s.email_strip_plus !== false) local = local.split('+')[0];
+  if (s.email_ignore_dots) local = local.replace(/\./g, '');
+  return local + '@' + domain;
+}
+function normPhone_(raw, s) {
+  var digits = raw.replace(/[^0-9]/g, '').replace(/^0+/, '');
+  if (digits.length < 7) return '';
+  if (s.phone_match_last10 !== false && digits.length > 10) digits = digits.slice(-10);
+  return digits;
+}
+function normLinkedin_(raw, s) {
+  var m = raw.match(/\/in\/([^/?#]+)/i);
+  if (m && s.linkedin_slug_only !== false) return 'in/' + m[1].toLowerCase();
+  return stripUrl_(raw);
+}
+function normReddit_(raw, s) {
+  var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
+  var handle = r ? r[1] : raw.replace(/^\/?(u\/|user\/)/i, '');
+  return s.reddit_strip_prefix !== false ? handle.replace(/^@/, '').toLowerCase() : handle;
+}
+function stripUrl_(str) {
+  return str.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
+            .split(/[?#]/)[0].replace(/\/+$/, '').toLowerCase();
 }
 
-function matchEntry(candidate, entry, settings) {
-  if (candidate.id_normalized && entry.id_normalized &&
-      candidate.id_normalized === entry.id_normalized)
-    return { hit: true, reason: 'identifier' };
-  if (settings.fuzzy_name_company &&
+function keysOf_(person, settings) {
+  var k = {};
+  IDENTIFIER_FIELDS.forEach(function (f) {
+    var n = normalizeField(f, person[f], settings);
+    if (n) k[f] = n;
+  });
+  return k;
+}
+
+function matchPerson(candidate, entry, settings) {
+  var ck = keysOf_(candidate, settings), ek = keysOf_(entry, settings);
+  for (var i = 0; i < IDENTIFIER_FIELDS.length; i++) {
+    var f = IDENTIFIER_FIELDS[i];
+    if (ck[f] && ek[f] && ck[f] === ek[f]) return { hit: true, reason: f };
+  }
+  if (settings && settings.fuzzy_name_company &&
       candidate.name && candidate.company && entry.name && entry.company) {
     var t = Number(settings.fuzzy_threshold) || 0.85;
-    if (similarity(candidate.name, entry.name) >= t &&
-        similarity(candidate.company, entry.company) >= t)
+    if (similarity_(candidate.name, entry.name) >= t &&
+        similarity_(candidate.company, entry.company) >= t)
       return { hit: true, reason: 'name+company' };
   }
   return { hit: false, reason: '' };
 }
 
-function similarity(a, b) {
+function similarity_(a, b) {
   a = (a || '').trim().toLowerCase(); b = (b || '').trim().toLowerCase();
   if (!a && !b) return 1;
   if (!a || !b) return 0;
   if (a === b) return 1;
-  return 1 - levenshtein(a, b) / Math.max(a.length, b.length);
+  return 1 - levenshtein_(a, b) / Math.max(a.length, b.length);
 }
-
-function levenshtein(a, b) {
-  var m = a.length, n = b.length, prev = [], curr = [], i, j, k, z;
-  for (j = 0; j <= n; j++) prev[j] = j;
+function levenshtein_(a, b) {
+  var m = a.length, n = b.length, prev = [], curr = [], i, k, z;
+  for (var j = 0; j <= n; j++) prev[j] = j;
   for (i = 1; i <= m; i++) {
     curr[0] = i;
     for (k = 1; k <= n; k++) {

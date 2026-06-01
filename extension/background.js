@@ -48,14 +48,14 @@ async function post(body) {
 chrome.runtime.onMessage.addListener(function (msg, _sender, reply) {
   if (msg.type === 'sync') { sync().then(function () { reply({ ok: true }); }); return true; }
   if (msg.type === 'add') {
-    post({ action: 'add', added_by: msg.me, source: msg.source,
-           identifier: msg.identifier, name: msg.name, company: msg.company,
-           status: msg.status || 'sent', notes: msg.notes || '' })
-      .then(function (r) { sync().then(function () { reply(r); }); });
+    var body = { action: 'add', added_by: msg.me };
+    var f = msg.fields || {};
+    for (var k in f) body[k] = f[k];
+    post(body).then(function (r) { sync().then(function () { reply(r); }); });
     return true;
   }
   if (msg.type === 'update') {
-    post({ action: 'update', id: msg.id, status: msg.status, notes: msg.notes })
+    post({ action: 'update', id: msg.id, status: msg.status, notes: msg.notes, added_by: msg.me })
       .then(function (r) { sync().then(function () { reply(r); }); });
     return true;
   }

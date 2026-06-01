@@ -9,19 +9,19 @@ a Chrome extension**. No server, no database, no monthly bill.
 
 ## ✨ What this is
 
-- 🟢 **Live dedup while you browse** — auto-detects who you're viewing on LinkedIn, Reddit, and Gmail and checks the shared log instantly.
-- ✍️ **One-click logging** — auto-extracts name/company/handle, you verify & edit, then save under your name.
-- 🔎 **Search the whole history** — by name, company, email, handle, or teammate.
-- 🎚️ **Tweakable matching** — dial dedup strictness up/down (email +tags, LinkedIn url noise, fuzzy name+company) from a Settings panel, no code.
-- 👤 **Per-person attribution** — every approach records who, when, and which channel.
-- 📊 **Lightweight stats** — approaches per person/source/week + double-touches caught.
-- 📄 **Data is just a Google Sheet** — open it, sort it, export it, trust it.
-- 💸 **$0 and serverless** — Google Apps Script hosts it; you run nothing.
+- 🧑 **One record per person** — name, phone, LinkedIn, email (and Reddit) on a single row; reach them by any channel.
+- 🟢 **Live dedup while you browse** — auto-detects who you're viewing on LinkedIn, Reddit, and Gmail and matches on **any** identifier instantly.
+- 🔗 **Auto-merge** — found someone's email after you'd logged their LinkedIn? Saving merges it into their existing record and keeps the original owner.
+- 🏷️ **Configurable stages** — `New → Contacted → Replied → Meeting → Won`, editable; track status per person.
+- ➕ **Your own columns** — add call notes, insights, stage detail directly in the Sheet; the app **preserves** them and shows them read-only.
+- 🎚️ **Tweakable matching** — dial strictness (phone country-code, email +tags, LinkedIn url noise, fuzzy name+company) from Settings, no code.
+- 👤 **Attribution** — who first added each person, who last updated, and when.
+- 📄 **Data is just a Google Sheet** — open it, sort it, export it, add columns. $0, serverless.
 
 ## ❌ What this isn't
 
-- 🚫 Not a CRM — no pipeline, no sequences, no email sending.
-- 🚫 Not an inbox/LinkedIn auto-sync — you log contacts deliberately, it never scrapes silently.
+- 🚫 Not a heavy CRM — no pipeline automation, sequences, or email sending; stages + notes + your own columns, that's it.
+- 🚫 Not an inbox/LinkedIn auto-sync — you log people deliberately, it never scrapes silently.
 - 🚫 Not verified identity — attribution is honor-system (fine for a trusted team of 3).
 - 🚫 Not a big-team tool — built for ~3 people sharing one Sheet.
 - 🚫 Not a hosted SaaS — you deploy your own copy.
@@ -79,34 +79,45 @@ I wanted a red flag *on the LinkedIn page itself*, backed by a Sheet I still own
 **Big picture**
 ```
 LinkedIn/Reddit/Gmail page
-        │  content script extracts identifier + name + company
+        │  content script extracts name + company + identifiers (phone/linkedin/email)
         ▼
-  shared dedup engine ──reads── local cache of the log (synced every ~4 min)
-        │  match? → on-page badge 🟢/🔴
+  shared dedup engine ──reads── local cache of people (synced every ~4 min)
+        │  matches on ANY identifier → on-page badge 🟢/🔴 + existing record
         ▼ (only on "Save")
-  Apps Script API ──appends row──► Google Sheet  ◄── web app (search/stats/settings)
+  Apps Script API ──upsert (merge)──► Google Sheet  ◄── dashboard (check/people/stats/settings)
+                                       (your custom columns preserved)
 ```
 
 **In one paragraph**
-The extension keeps a local copy of the shared log and dedupes *on your machine*,
-so the badge is instant and nearly free. It only calls the backend to write a new
-approach or pull fresh data. The Apps Script backend is a thin gate over one Google
-Sheet and also serves a small web dashboard for searching, stats, and tuning the
-matching rules — which sync back to every extension.
+The extension keeps a local copy of the shared people list and dedupes *on your
+machine*, so the badge is instant and nearly free. On save it calls the backend,
+which **upserts** — if the person already exists under any identifier it merges
+the new fields into their row (filling blanks, updating status, keeping the
+original owner) instead of creating a duplicate. The backend is a thin gate over
+one Google Sheet and serves a dashboard for searching, stats, and tuning the
+matching rules; any columns you add in the Sheet are left untouched.
 
 **Why this architecture works**
-- 🗃️ One Sheet, not a database to run or pay for.
-- ⚡ Dedup runs locally against a cached log → instant badge, minimal API calls.
+- 🗃️ One Sheet, not a database to run or pay for — and you can add CRM columns to it freely.
+- ⚡ Dedup runs locally against a cached list → instant badge, minimal API calls.
 - 🧩 One matching engine shared by extension and backend → strictness is identical everywhere.
+- 🔗 Header-driven upsert merges on any identifier and never reorders or drops your columns.
 - 🔧 Layout breakage degrades to manual entry, never to a broken tool.
 
 **Things you can configure** (Settings tab)
 ```
-email_strip_plus     = on    # jane+sales@x.com → jane@x.com
+stages               = New,Contacted,Replied,Meeting,Won,Lost
+phone_match_last10   = on    # ignore country code (compare last 10 digits)
 linkedin_slug_only   = on    # ignore url tracking junk
-fuzzy_name_company   = off   # warn on same name+company w/o shared id
+fuzzy_name_company   = off   # also merge same name+company w/o a shared identifier
 fuzzy_threshold      = 0.85  # lower = looser
 ```
+
+> **One thing to know:** two records merge only when they **share an identifier**
+> (or fuzzy name+company is on). If you log someone by LinkedIn and a teammate
+> has only their email with nothing else in common, they stay two rows until a
+> shared identifier links them — turn on *fuzzy name+company* to also merge on a
+> matching name+company.
 
 ## 📖 More
 

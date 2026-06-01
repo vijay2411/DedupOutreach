@@ -66,36 +66,60 @@ to your real names.
 
 ---
 
+## The data model (one row per person)
+
+Each person is **one row** with managed columns:
+`id, name, company, phone, linkedin, email, reddit, status, added_by, added_at,
+updated_at, updated_by, notes`.
+
+You can reach a person by phone, LinkedIn, **or** email — each is matched
+independently, so any single shared identifier links to the same record.
+
+### Add your own CRM columns
+Add any columns you like in the Sheet (e.g. `stage_detail`, `call_date`,
+`insight`, `next_step`). The app **never reorders or overwrites them** — it only
+writes the managed columns above. Your columns show **read-only** in the
+dashboard's **People** tab (amber headers); edit them directly in the Sheet.
+
+### How merging works (important)
+On save the app **upserts**: if the person already exists under any identifier,
+it merges — filling blank identifiers, updating status, appending notes, keeping
+the original `added_by` and recording `updated_by`. Two records merge **only when
+they share an identifier** (or **Fuzzy name + company** is on). Log someone by
+LinkedIn and a teammate has only their email? They stay separate until a shared
+identifier links them — or turn on fuzzy matching to also merge on name+company.
+
 ## Daily use
 
 - **On LinkedIn / Reddit / Gmail**: a badge appears bottom-right —
-  🟢 *not approached* or 🔴 *already approached by X on date*. Click **Log this
-  contact**, verify the prefilled fields, **Save**.
-- **Anywhere else**: open the dashboard, paste an identifier, **Check for
-  duplicates**, then **Log it**.
-- **Search history**: dashboard → **History** tab.
-- **Tune strictness**: dashboard → **Settings** (syncs to everyone's extension
-  within a few minutes).
+  🟢 *not in CRM* or 🔴 *already in CRM (owner · matched-on · stage)*. Click
+  **Log this person / View · update record**, verify the prefilled fields, set a
+  **stage**, **Save** (merges if they exist).
+- **Anywhere else**: open the dashboard → **Check & Add**, fill name / phone /
+  LinkedIn / email, **Check for duplicates**, then **Save**.
+- **Browse / search people**: dashboard → **People** tab (shows custom columns too).
+- **Tune strictness & stages**: dashboard → **Settings** (syncs to everyone's
+  extension within a few minutes).
 
-## Tuning the dedup (Settings tab)
+## Tuning (Settings tab)
 
-| Knob | Turn it on when… |
+| Setting | Notes |
 |---|---|
-| Lowercase emails | always (default on) |
-| Ignore `+tags` | you use `you+lead@gmail` style addresses |
-| Ignore dots in email | targets use Gmail and dot-tricks matter |
-| LinkedIn slug only | always (default on) — kills url tracking params |
-| Normalize Reddit handles | always (default on) |
-| Fuzzy name + company | warn even without a shared URL/email (a few false alarms) |
-| Fuzzy threshold | lower = looser/more warnings, higher = stricter |
+| Stages | comma-separated; first is the default for new people |
+| Phone: ignore country code | compare last 10 digits (default on) |
+| Ignore `+tags` in email | `you+lead@x.com` → `you@x.com` |
+| Ignore dots in email | Gmail-style `j.a.ne@gmail` → `jane@gmail` |
+| LinkedIn slug only | match `/in/<slug>`, ignore url params (default on) |
+| Normalize Reddit handles | strip `u/`, `/user/`, lowercase (default on) |
+| Fuzzy name + company | also merge same name+company without a shared identifier |
+| Fuzzy threshold | lower = looser, higher = stricter |
 
 ## Tests
 
 ```bash
-node extension/matcher.test.js
+node extension/matcher.test.js   # matching engine: normalization, multi-identifier match, fuzzy
+node apps-script/upsert.test.js  # merge: blank-fill, owner preservation, custom-column survival
 ```
-Covers normalization, cross-channel dedup, false-positive avoidance, and the
-fuzzy toggle.
 
 ## Troubleshooting
 

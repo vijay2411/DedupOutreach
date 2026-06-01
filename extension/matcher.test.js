@@ -1,6 +1,7 @@
 /**
- * Plain-node tests for the dedup engine. Run: node extension/matcher.test.js
- * (No deps. Mirrors the logic that also lives in apps-script/Matcher.gs.)
+ * Plain-node tests for the person-centric dedup engine.
+ * Run: node extension/matcher.test.js   (no deps)
+ * Mirrors the matcher block in apps-script/Code.gs.
  */
 global.self = global;
 require('./matcher.js');
@@ -8,7 +9,7 @@ var M = global.Matcher;
 
 var S = {
   email_lowercase: true, email_strip_plus: true, email_ignore_dots: false,
-  linkedin_slug_only: true, reddit_strip_prefix: true,
+  linkedin_slug_only: true, reddit_strip_prefix: true, phone_match_last10: true,
   fuzzy_name_company: false, fuzzy_threshold: 0.85
 };
 
@@ -19,24 +20,42 @@ function eq(a, b, msg) {
   if (!ok) fails++;
 }
 
-eq(M.normalizeId('linkedin', 'https://www.linkedin.com/in/Jane-Doe/?utm=x', S), 'in/jane-doe', 'linkedin url noise stripped');
-eq(M.normalizeId('linkedin', 'linkedin.com/in/jane-doe', S), 'in/jane-doe', 'linkedin bare == full url');
-eq(M.normalizeId('email', 'Jane+sales@Acme.com', S), 'jane@acme.com', 'email lowercased + plus stripped');
-eq(M.normalizeId('reddit', 'https://www.reddit.com/user/CoolGuy/', S), 'coolguy', 'reddit handle from url');
-eq(M.normalizeId('reddit', 'u/CoolGuy', S), 'coolguy', 'reddit bare handle');
+// ── field normalization ────────────────────────────────────────────────────
+eq(M.normalizeField('email', 'Jane+sales@Acme.com', S), 'jane@acme.com', 'email lowercased + plus stripped');
+eq(M.normalizeField('linkedin', 'https://www.linkedin.com/in/Jane-Doe/?utm=x', S), 'in/jane-doe', 'linkedin slug');
+eq(M.normalizeField('phone', '+1 (415) 555-1234', S), '4155551234', 'phone digits, country code dropped');
+eq(M.normalizeField('phone', '415.555.1234', S), '4155551234', 'phone punctuation stripped == same');
+eq(M.normalizeField('phone', '123', S), '', 'too-short phone rejected');
+eq(M.normalizeField('reddit', 'https://www.reddit.com/user/CoolGuy/', S), 'coolguy', 'reddit handle');
 
-var log = [
-  { source: 'linkedin', id_normalized: 'in/jane-doe', name: 'Jane Doe', company: 'Acme', added_by: 'Aman', status: 'replied', added_at: '2026-04-12' },
-  { source: 'email', id_normalized: 'jane@acme.com', name: 'Jane Doe', company: 'Acme', added_by: 'Vedant', status: 'sent', added_at: '2026-05-01' }
+// ── person-centric dedup: one person, many identifiers ──────────────────────
+var people = [
+  { id: '1', name: 'Jane Doe', company: 'Acme', linkedin: 'https://www.linkedin.com/in/jane-doe/',
+    email: '', phone: '', reddit: '', status: 'Contacted', added_by: 'Aman' },
+  { id: '2', name: 'Bob Lee', company: 'Globex', email: 'bob@globex.com',
+    phone: '+44 20 7946 0958', linkedin: '', reddit: '', status: 'New', added_by: 'Vedant' }
 ];
 
-eq(M.findHits({ source: 'linkedin', identifier: 'https://www.linkedin.com/in/jane-doe?trk=abc' }, log, S).hits.length, 1, 'duplicate linkedin caught despite url noise');
-eq(M.findHits({ source: 'email', identifier: 'JANE@acme.com' }, log, S).hits.length, 1, 'duplicate email caught case-insensitively');
-eq(M.findHits({ source: 'linkedin', identifier: 'linkedin.com/in/someone-new' }, log, S).hits.length, 0, 'new person = no false positive');
+// reached Jane by email now — should match her existing linkedin-only row
+eq(M.findHits({ name: 'Jane', email: 'jane@acme.com' }, people, S).hits.length, 0, 'no false match (Jane has no email on file yet)');
+// match Jane by her known linkedin despite url noise
+var jr = M.findHits({ linkedin: 'linkedin.com/in/jane-doe?trk=x' }, people, S);
+eq(jr.hits.length, 1, 'match person by linkedin across url noise');
+eq(jr.hits[0].contact.id, '1', 'matched the right person');
+eq(jr.hits[0].reason, 'linkedin', 'reason reported = linkedin');
+// match Bob by phone with different formatting + country code
+var br = M.findHits({ phone: '020 7946 0958' }, people, S);
+eq(br.hits.length, 1, 'match person by phone (country code + formatting differ)');
+eq(br.hits[0].contact.id, '2', 'matched Bob by phone');
+// match Bob by email
+eq(M.findHits({ email: 'BOB@globex.com' }, people, S).hits.length, 1, 'match person by email case-insensitively');
+// genuinely new person
+eq(M.findHits({ email: 'new@startup.io', phone: '5559990000' }, people, S).hits.length, 0, 'new person = no match');
 
+// ── fuzzy name+company toggle ───────────────────────────────────────────────
 var Sf = Object.assign({}, S, { fuzzy_name_company: true });
-eq(M.findHits({ source: 'other', identifier: 'x.com/jdoe', name: 'Jane Doe', company: 'Acme' }, log, Sf).hits.length >= 1, true, 'fuzzy name+company warns w/o shared id');
-eq(M.findHits({ source: 'other', identifier: 'x.com/jdoe', name: 'Jane Doe', company: 'Acme' }, log, S).hits.length, 0, 'fuzzy OFF = no name/company warning');
+eq(M.findHits({ name: 'Jane Doe', company: 'Acme' }, people, Sf).hits.length, 1, 'fuzzy name+company matches w/o shared id');
+eq(M.findHits({ name: 'Jane Doe', company: 'Acme' }, people, S).hits.length, 0, 'fuzzy OFF = no name/company match');
 
 console.log(fails ? ('\n' + fails + ' FAILED') : '\nAll passed.');
 process.exit(fails ? 1 : 0);
