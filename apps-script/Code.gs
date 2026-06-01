@@ -21,17 +21,20 @@ var SETTINGS_SHEET = 'Settings';
 
 // Columns the app manages. Anything else in the sheet is user-owned & preserved.
 var MANAGED_HEADERS = [
-  'id', 'name', 'company', 'phone', 'linkedin', 'email', 'reddit',
+  'id', 'name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source',
   'status', 'added_by', 'added_at', 'updated_at', 'updated_by', 'notes'
 ];
 // Fields a write request is allowed to set on a managed row.
-var EDITABLE_FIELDS = ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'status', 'notes'];
+var EDITABLE_FIELDS = ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source', 'status', 'notes'];
+// Fields that dedupe a person (handle covers Slack/Twitter/etc.)
+var ID_FIELDS = ['phone', 'linkedin', 'email', 'reddit', 'handle'];
 
 var DEFAULT_SETTINGS = {
   email_lowercase: true, email_strip_plus: true, email_ignore_dots: false,
   linkedin_slug_only: true, reddit_strip_prefix: true, phone_match_last10: true,
   fuzzy_name_company: false, fuzzy_threshold: 0.85,
-  stages: 'New,Contacted,Replied,Meeting,Won,Lost'
+  stages: 'New,Contacted,Replied,Meeting,Won,Lost',
+  sources: 'LinkedIn,Email,Phone,WhatsApp,Slack,Twitter/X,Reddit,Other'
 };
 
 // ── Entry points ────────────────────────────────────────────────────────────
@@ -201,6 +204,10 @@ function firstStage(settings) {
 
 function upsertContact(body) {
   cleanBody(body);
+  var hasIdentifier = ID_FIELDS.some(function (f) { return body[f]; });
+  if (!hasIdentifier && !body.source)
+    return { ok: false, error: 'Add at least one identifier (phone / LinkedIn / email / handle) or a source.' };
+
   var settings = readSettings();
   var sh = sheet(CONTACTS_SHEET);
   var headers = ensureHeaders(sh);
@@ -216,10 +223,11 @@ function upsertContact(body) {
   if (matchIdx > -1) {
     var row = rows[matchIdx];
     var patch = {};
-    ['name', 'company', 'phone', 'linkedin', 'email', 'reddit'].forEach(function (f) {
+    ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle'].forEach(function (f) {
       if (!String(row[f] || '').trim() && body[f]) patch[f] = body[f]; // fill blanks only
     });
     if (body.status) patch.status = body.status;
+    if (body.source) patch.source = body.source;     // reflect latest channel
     if (body.notes) patch.notes = appendNote(row.notes, body.added_by, body.notes);
     patch.updated_at = new Date().toISOString();
     patch.updated_by = body.added_by || '';
@@ -232,7 +240,8 @@ function upsertContact(body) {
   appendRecord(sh, headers, {
     id: id, name: body.name || '', company: body.company || '',
     phone: body.phone || '', linkedin: body.linkedin || '', email: body.email || '',
-    reddit: body.reddit || '', status: body.status || firstStage(settings),
+    reddit: body.reddit || '', handle: body.handle || '', source: body.source || '',
+    status: body.status || firstStage(settings),
     added_by: body.added_by || 'unknown', added_at: now, updated_at: now,
     updated_by: body.added_by || '', notes: body.notes || ''
   });
@@ -255,7 +264,8 @@ function deleteContact(body) {
 function candidateFrom(body) {
   return {
     name: body.name || '', company: body.company || '', phone: body.phone || '',
-    linkedin: body.linkedin || '', email: body.email || '', reddit: body.reddit || ''
+    linkedin: body.linkedin || '', email: body.email || '', reddit: body.reddit || '',
+    handle: body.handle || '', source: body.source || ''
   };
 }
 
@@ -352,7 +362,7 @@ function setup() {
 // ── Matching engine ─────────────────────────────────────────────────────────
 // Kept algorithmically identical to extension/matcher.js. Mirror any change.
 
-var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit'];
+var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit', 'handle'];
 
 function normalizeField(field, value, settings) {
   var raw = (value == null ? '' : String(value)).trim();
@@ -362,6 +372,7 @@ function normalizeField(field, value, settings) {
   if (field === 'phone') return normPhone_(raw, settings);
   if (field === 'linkedin') return normLinkedin_(raw, settings);
   if (field === 'reddit') return normReddit_(raw, settings);
+  if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '').toLowerCase();
   return stripUrl_(raw);
 }
 
@@ -383,11 +394,12 @@ function canonicalize(field, value) {
     var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
     return 'u/' + (r ? r[1] : raw.replace(/^@/, ''));
   }
+  if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '');
   return raw;
 }
 
 function cleanBody(body) {
-  ['name', 'company', 'phone', 'linkedin', 'email', 'reddit'].forEach(function (f) {
+  ['name', 'company', 'phone', 'linkedin', 'email', 'reddit', 'handle', 'source'].forEach(function (f) {
     if (body[f] !== undefined && body[f] !== null) body[f] = canonicalize(f, body[f]);
   });
   return body;

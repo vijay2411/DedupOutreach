@@ -11,6 +11,8 @@
 #dedup-badge .dm-dot{width:9px;height:9px;border-radius:50%;flex:none}
 #dedup-badge.clear .dm-dot{background:#0f9d58}
 #dedup-badge.dup .dm-dot{background:#d92d20}
+#dedup-badge.manual .dm-dot{background:#2f54ff}
+#dedup-badge.form{max-height:84vh;overflow-y:auto}
 #dedup-badge .dm-title{font-weight:800;font-size:13.5px;letter-spacing:-.01em;flex:1}
 #dedup-badge .dm-x{cursor:pointer;color:#9aa0aa;font-size:18px;line-height:1;font-weight:600}
 #dedup-badge .dm-x:hover{color:#16181d}

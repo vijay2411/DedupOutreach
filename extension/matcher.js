@@ -9,7 +9,7 @@
  */
 (function (root) {
   // Order matters only for which reason is reported first.
-  var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit'];
+  var IDENTIFIER_FIELDS = ['email', 'phone', 'linkedin', 'reddit', 'handle'];
 
   function normalizeField(field, value, settings) {
     var raw = (value == null ? '' : String(value)).trim();
@@ -19,6 +19,7 @@
     if (field === 'phone') return normPhone(raw, settings);
     if (field === 'linkedin') return normLinkedin(raw, settings);
     if (field === 'reddit') return normReddit(raw, settings);
+    if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '').toLowerCase();
     return stripUrl(raw);
   }
 
@@ -108,7 +109,8 @@
       var r = raw.match(/(?:u\/|user\/)([^/?#\s]+)/i);
       return 'u/' + (r ? r[1] : raw.replace(/^@/, ''));
     }
-    return raw; // name, company: trimmed + single-spaced
+    if (field === 'handle') return raw.replace(/^@/, '').replace(/\s+/g, '');
+    return raw; // name, company, source: trimmed + single-spaced
   }
 
   /** All existing people that are the same as candidate. */

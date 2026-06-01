@@ -81,6 +81,16 @@ ctx.apiSettings({ fuzzy_name_company: true });
 r = ctx.upsertContact({ added_by: 'Vedant', name: 'Bob', company: 'Globex', linkedin: 'linkedin.com/in/bob-x' });
 ok(r.merged && r.reason === 'name+company', 'fuzzy name+company merges despite no shared identifier');
 
+// handle dedupe (Slack/Twitter/etc.) + source validation
+var hr = ctx.upsertContact({ added_by: 'Rahul', name: 'Sam Slack', handle: '@sam_k', source: 'Slack' });
+ok(hr.ok && !hr.merged, 'source+handle person created');
+var hr2 = ctx.upsertContact({ added_by: 'Saksham', handle: 'sam_k', email: 'sam@x.com' });
+ok(hr2.merged && hr2.reason === 'handle', 'merged by handle (@ and case ignored)');
+var nope = ctx.upsertContact({ added_by: 'Rahul', name: 'No Identifiers' });
+ok(!nope.ok, 'reject person with no identifier and no source');
+var srcOnly = ctx.upsertContact({ added_by: 'Rahul', name: 'Phone Friend', source: 'WhatsApp' });
+ok(srcOnly.ok, 'allow source-only person (e.g. met on WhatsApp)');
+
 // delete a person by id
 var before = ctx.readContacts().length;
 var bobId = ctx.readContacts().find(function (x) { return x.name === 'Bob'; }).id;
