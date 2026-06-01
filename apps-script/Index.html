@@ -366,7 +366,7 @@
   function pill(name){var c=HUE_COLORS[stageHue(name)];return '<span class="pill" style="background:'+c[0]+';color:'+c[1]+'">'+esc(name||'—')+'</span>'}
 
   // ── Check & Add: auto-check + instant one-click add ──────────
-  var autoOn=true, lastHits=[], checkTimer=null;
+  var autoOn=true, lastHits=[], checkTimer=null, checkSeq=0;
   function candidate(){return {phone:$('f_phone').value.trim(),linkedin:$('f_linkedin').value.trim(),
     email:$('f_email').value.trim(),name:$('f_name').value.trim(),company:$('f_company').value.trim(),status:$('f_status').value}}
   function hasId(c){return c.phone||c.linkedin||c.email}
@@ -374,14 +374,19 @@
 
   function onId(){
     var c=candidate();
+    checkSeq++;                            // any edit invalidates in-flight checks
     if(!hasId(c)){hideAction();return}
     showAction(undefined);                 // instant Add button, state unknown
-    if(autoOn){clearTimeout(checkTimer);checkTimer=setTimeout(runCheck,300)}
+    if(autoOn){clearTimeout(checkTimer);checkTimer=setTimeout(runCheck,400)}
   }
   function runCheck(){
     var c=candidate(); if(!hasId(c)){hideAction();return}
     showAction(null);                      // "checking…"
-    google.script.run.withSuccessHandler(function(r){lastHits=r.hits||[];showAction(lastHits)}).apiCheck(c);
+    var my=++checkSeq;
+    google.script.run.withSuccessHandler(function(r){
+      if(my!==checkSeq) return;            // stale reply (input changed since) — ignore
+      lastHits=r.hits||[]; showAction(lastHits);
+    }).apiCheck(c);
   }
   function hideAction(){$('actionbar').classList.add('hide');$('reclist').innerHTML='';lastHits=[]}
 
