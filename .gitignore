@@ -14,3 +14,7 @@ apps-script/appsscript.json
 # local artifacts
 *.png
 .playwright-mcp/
+
+# but keep README screenshots
+!docs/screenshots/
+!docs/screenshots/*.png
