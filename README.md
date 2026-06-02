@@ -3,8 +3,6 @@
 **A mini shared CRM that lives entirely inside a Google Sheet.**
 Open a LinkedIn / X / Gmail / Instagram / Reddit / GitHub profile and a little bar tells you instantly — 🟢 *nobody's reached out* or 🔴 *a teammate already did* — so your team never cold-messages the same person twice.
 
-<img src="docs/screenshots/bar-linkedin.png" width="780" alt="The DedupManager bar on a LinkedIn profile showing 'Not in CRM yet'">
-
 > No servers. No signups. No database to run. Just a Chrome extension + one Google Sheet.
 
 ---
@@ -44,17 +42,25 @@ In plain English: the **extension and dashboard are the frontends**; the **Apps 
 
 ## 📸 See it
 
-**Auto-detects on any profile site** (here on X/Twitter) and checks the shared sheet live:
+**Same profile, two states** — the bar reads the shared sheet **live**: 🟢 *not in CRM* (left) → 🔴 *already approached by a teammate* (right).
 
-<img src="docs/screenshots/bar-twitter.png" width="720" alt="DedupManager bar auto-detecting on an X/Twitter profile">
+**Satya Nadella — on LinkedIn:**
 
-**Fields are auto-extracted — verify/edit, pick a stage, log it under your name:**
+| 🟢 Not in CRM | 🔴 In CRM (Vedant · New) |
+|:---:|:---:|
+| <img src="docs/screenshots/satya-absent.png" width="380" alt="LinkedIn profile, bar shows Not in CRM"> | <img src="docs/screenshots/satya-present.png" width="380" alt="LinkedIn profile, bar shows In CRM"> |
 
-<img src="docs/screenshots/bar-linkedin-details.png" width="720" alt="DedupManager bar with auto-extracted name, company, source and stage">
+**Sam Altman — on X/Twitter:**
 
-| The extension popup (your controls) | The data — it's just a Google Sheet you own |
-|---|---|
-| <img src="docs/screenshots/popup.png" width="360" alt="DedupManager extension popup"> | <img src="docs/screenshots/sheet-db.png" width="360" alt="The DedupManager DB Google Sheet"> |
+| 🟢 Not in CRM | 🔴 In CRM (Vedant · New) |
+|:---:|:---:|
+| <img src="docs/screenshots/sama-absent.png" width="380" alt="X profile, bar shows Not in CRM"> | <img src="docs/screenshots/sama-present.png" width="380" alt="X profile, bar shows In CRM"> |
+
+**Your controls, and your data — it's just a Google Sheet you own:**
+
+| Extension popup | The Google Sheet (the database) |
+|:---:|:---:|
+| <img src="docs/screenshots/extension.png" width="380" alt="DedupManager extension popup"> | <img src="docs/screenshots/sheet.png" width="380" alt="The DedupManager DB Google Sheet"> |
 
 ---
 
