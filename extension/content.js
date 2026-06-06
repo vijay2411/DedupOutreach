@@ -170,24 +170,36 @@
     F.panel.style.opacity = String(STATE.opacity);
     applyPos();
   }
-  function toggleCollapse(tapX, tapY) {
-    collapsed = !collapsed;
-    F.panel.classList.toggle('collapsed', collapsed);
-    if (F.head) F.head.title = 'Drag to move · click to ' + (collapsed ? 'expand' : 'minimize');
-    if (collapsed && tapX != null) placeCircleAt(tapX, tapY);   // circle forms right where you tapped
-    chrome.storage.local.set({ barCollapsed: collapsed });
-  }
-  function placeCircleAt(tx, ty) {
-    var sz = 48, vw = window.innerWidth, vh = window.innerHeight;
-    var left = Math.min(Math.max(4, tx - sz / 2), vw - sz - 4);
-    var top = Math.min(Math.max(4, ty - sz / 2), vh - sz - 4);
-    var cx = left + sz / 2, cy = top + sz / 2;
-    STATE.pos = {                                // anchor by quadrant so re-expanding grows inward
-      hx: cx < vw / 2 ? 'left' : 'right', x: cx < vw / 2 ? left : vw - (left + sz),
-      hy: cy < vh / 2 ? 'top' : 'bottom', y: cy < vh / 2 ? top : vh - (top + sz)
+  // Anchor by the corner of whatever quadrant the given rect sits in, then apply.
+  // Used on drag-end, on collapse (rect = circle at tap), and on expand (rect =
+  // the circle's CURRENT position) — so expand direction is derived from where the
+  // circle physically is, never from possibly-stale stored state.
+  function anchorFromRect(rect) {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    STATE.pos = {
+      hx: cx < vw / 2 ? 'left' : 'right', x: cx < vw / 2 ? rect.left : vw - rect.right,
+      hy: cy < vh / 2 ? 'top' : 'bottom', y: cy < vh / 2 ? rect.top : vh - rect.bottom
     };
     applyPos();
     chrome.storage.local.set({ barPos: STATE.pos });
+  }
+  function toggleCollapse(tapX, tapY) {
+    if (collapsed) {                                  // EXPAND
+      var cr = F.panel.getBoundingClientRect();       // where the circle is right now
+      collapsed = false; F.panel.classList.remove('collapsed');
+      anchorFromRect(cr);                             // grow inward from the circle's quadrant
+    } else {                                          // COLLAPSE
+      collapsed = true; F.panel.classList.add('collapsed');
+      if (tapX != null) {                             // drop the circle centred on the tap point
+        var sz = 48, vw = window.innerWidth, vh = window.innerHeight;
+        var l = Math.min(Math.max(4, tapX - sz / 2), vw - sz - 4);
+        var t = Math.min(Math.max(4, tapY - sz / 2), vh - sz - 4);
+        anchorFromRect({ left: l, top: t, right: l + sz, bottom: t + sz, width: sz, height: sz });
+      }
+    }
+    if (F.head) F.head.title = 'Drag to move · click to ' + (collapsed ? 'expand' : 'minimize');
+    chrome.storage.local.set({ barCollapsed: collapsed });
   }
   function makeDraggable(panel, handle) {
     handle.addEventListener('mousedown', function (e) {
@@ -204,14 +216,7 @@
       function mu() {
         document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu);
         if (dragMoved) {
-          var rect = panel.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
-          var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-          STATE.pos = {                              // store as distance from the nearest corner
-            hx: cx < vw / 2 ? 'left' : 'right', x: cx < vw / 2 ? rect.left : vw - rect.right,
-            hy: cy < vh / 2 ? 'top' : 'bottom', y: cy < vh / 2 ? rect.top : vh - rect.bottom
-          };
-          applyPos();                                // re-anchor by corner (clears the transient left/top)
-          chrome.storage.local.set({ barPos: STATE.pos });
+          anchorFromRect(panel.getBoundingClientRect());   // re-anchor by corner (clears transient left/top)
         } else {
           toggleCollapse(sx, sy);    // a tap (no drag) toggles; collapse forms the circle at the tap point
         }
