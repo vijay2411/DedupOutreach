@@ -170,11 +170,24 @@
     F.panel.style.opacity = String(STATE.opacity);
     applyPos();
   }
-  function toggleCollapse() {
+  function toggleCollapse(tapX, tapY) {
     collapsed = !collapsed;
     F.panel.classList.toggle('collapsed', collapsed);
     if (F.head) F.head.title = 'Drag to move · click to ' + (collapsed ? 'expand' : 'minimize');
+    if (collapsed && tapX != null) placeCircleAt(tapX, tapY);   // circle forms right where you tapped
     chrome.storage.local.set({ barCollapsed: collapsed });
+  }
+  function placeCircleAt(tx, ty) {
+    var sz = 48, vw = window.innerWidth, vh = window.innerHeight;
+    var left = Math.min(Math.max(4, tx - sz / 2), vw - sz - 4);
+    var top = Math.min(Math.max(4, ty - sz / 2), vh - sz - 4);
+    var cx = left + sz / 2, cy = top + sz / 2;
+    STATE.pos = {                                // anchor by quadrant so re-expanding grows inward
+      hx: cx < vw / 2 ? 'left' : 'right', x: cx < vw / 2 ? left : vw - (left + sz),
+      hy: cy < vh / 2 ? 'top' : 'bottom', y: cy < vh / 2 ? top : vh - (top + sz)
+    };
+    applyPos();
+    chrome.storage.local.set({ barPos: STATE.pos });
   }
   function makeDraggable(panel, handle) {
     handle.addEventListener('mousedown', function (e) {
@@ -200,7 +213,7 @@
           applyPos();                                // re-anchor by corner (clears the transient left/top)
           chrome.storage.local.set({ barPos: STATE.pos });
         } else {
-          toggleCollapse();          // a tap (no drag) on the header minimizes/expands
+          toggleCollapse(sx, sy);    // a tap (no drag) toggles; collapse forms the circle at the tap point
         }
       }
       document.addEventListener('mousemove', mm);
